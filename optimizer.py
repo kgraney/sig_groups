@@ -40,6 +40,7 @@ class Vars(object):
     self.num_groups = {}
     self.target_size = {}
     self.target_leaders = {}
+    self.num_scouts = {}
 
     ### Derived variables.
 
@@ -47,6 +48,8 @@ class Vars(object):
     self.groups = defaultdict(lambda: [])
     self.group_leaders = defaultdict(lambda: [])
     self.group_leaders_experienced = defaultdict(lambda: [])
+    self.group_leaders_scouted = defaultdict(lambda: [])
+    self.group_leaders_female = defaultdict(lambda: [])
 
     # Map from (r, g) -> gender -> [bool]
     self.groups_genders = defaultdict(lambda: defaultdict(lambda: []))
@@ -91,6 +94,12 @@ class AlgorithmTM(object):
     for r in prior_rosters:
       num_prior_rides = max(num_prior_rides, r.ride + 1)
 
+    self.num_scouts = defaultdict(lambda: 0)  # map from r -> int
+    for r in range(0, params.num_rides):
+      for p in self.riders.AllLeaders():
+        if p.IsLeader() and p.Scouted(r):
+          self.num_scouts[r] += 1
+
     # The ride to start algorithm constraints on.
     self.start_ride = num_prior_rides
     print('Initializing Algorithm to start at ride ', self.start_ride)
@@ -116,18 +125,30 @@ class AlgorithmTM(object):
     # Add references into the boolean matrix for different breakdowns by group,
     # gender, leader, etc.
     for r in range(0, self.params.num_rides):
+      num_scout_groups = []
       for g in range(0, self.params.max_groups):
         vars.group_active[(r,g)] = model.NewBoolVar(VarName('group_active', [r, g]))
-
+        num_scouts_group = []
         for p in self.riders.AllRiders():
           me = vars.memberships[(r, g, p.id)]
 
           vars.groups[(r,g)].append(me)
           vars.groups_genders[(r,g)][p.gender].append(me)
-          if isinstance(p, Leader):
+          if p.IsLeader():
             vars.group_leaders[(r,g)].append(me)
             if p.experienced:
               vars.group_leaders_experienced[(r,g)].append(me)
+            if p.Scouted(r):
+              vars.group_leaders_scouted[(r,g)].append(me)
+              num_scouts_group.append(me)
+            if p.gender == 'F':
+              vars.group_leaders_female[(r,g)].append(me)
+
+        group_has_scout = model.NewBoolVar(VarName('group_has_scout', [r, g]))
+        model.Add(sum(num_scouts_group) >= 1).OnlyEnforceIf(group_has_scout)
+        model.Add(sum(num_scouts_group) < 1).OnlyEnforceIf(group_has_scout.Not())
+        num_scout_groups.append(group_has_scout)
+      vars.num_scouts[r] = sum(num_scout_groups)
 
     # Constrain historical rosters to what they were.
     prior_ride_true = set()
@@ -152,9 +173,10 @@ class AlgorithmTM(object):
       vars.target_size[r] = model.NewIntVar(0, self.params.max_group_size, VarName('target_size', [r]))
       vars.target_leaders[r] = model.NewIntVar(0, self.params.max_group_size, VarName('target_leaders', [r]))
       model.AddHint(vars.target_size[r], self.params.max_desirable_group_size)
-      model.AddHint(vars.target_leaders[r], 2)
+      model.Add(vars.target_leaders[r] == 2)
 
     for r in range(self.start_ride, self.params.num_rides):
+      model.Add(vars.num_scouts[r] == self.num_scouts[r])
       for g in range(0, self.params.max_groups):
         group_size = sum(vars.groups[(r,g)])
         group_active = vars.group_active[(r,g)]
@@ -187,6 +209,7 @@ class AlgorithmTM(object):
         model.AddLinearConstraint(group_size - vars.target_size[r], 0, 1).OnlyEnforceIf(group_active)
         model.AddLinearConstraint(num_leaders - vars.target_leaders[r], 0, 1).OnlyEnforceIf(group_active)
 
+
   def AddRiderConstraints(self, model, vars):
     # Make sure every rider is in exactly one group if they're attending the
     # ride and zero groups if they aren't.
@@ -196,6 +219,13 @@ class AlgorithmTM(object):
         for g in range(0, self.params.max_groups):
           s += vars.memberships[(r, g, p.id)]
         model.Add(s == p.IsAvailable(r))
+
+    # Make sure participants that need a woman leader are assigned a group with one.
+    for r in range(self.start_ride, self.params.num_rides):
+      for p in self.riders.AllRiders():
+        for g in range(0, self.params.max_groups):
+          if p.NeedsWomanLeader():
+            model.Add(sum(vars.group_leaders_female[(r,g)]) > 0).OnlyEnforceIf(vars.memberships[(r,g,p.id)])
 
   def OptimizeGroupSize(self, model, vars):
     '''

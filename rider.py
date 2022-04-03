@@ -14,6 +14,9 @@ class Rider(object):
   def IsLeader(self):
     return False
 
+  def NeedsWomanLeader(self):
+    return False
+
   def SetAvailable(self, ride_num):
     self.availability.add(ride_num)
 
@@ -25,15 +28,24 @@ class Leader(Rider):
     super().__init__(id, name)
     self.experienced = False
     self.part_time = False
+    self.scouted = set()
 
   def IsLeader(self):
     return True
+
+  def Scouted(self, ride):
+    return ride in self.scouted
 
 class Participant(Rider):
   def __init__(self, id, name):
     super().__init__(id, name)
     self.mentor = None
     self.status = ''
+    self.woman_leader_req = False
+
+  def NeedsWomanLeader(self):
+    return self.woman_leader_req
+
 
 class RiderData(object):
   def __init__(self, leaders, participants, matches):

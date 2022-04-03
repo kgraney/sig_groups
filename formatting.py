@@ -18,7 +18,7 @@ def PrintRosters(rosters):
         by_ride[r.ride].append(r)
 
     for ride, rs in by_ride.items():
-        print('\n\nRide %d' % ride)
+        print('\n\nRide %d' % (ride+1))
         rows = max(len(r) for r in rs)
         cols = len(rs)
 
