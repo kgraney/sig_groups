@@ -6,6 +6,7 @@ from ortools.sat.python import cp_model
 
 from sig_groups.ride import Roster
 from sig_groups.rider import Leader, Participant, Match
+from sig_groups.formatting import PrintRosters
 
 class Params(object):
     def __init__(self):
@@ -24,6 +25,12 @@ class Params(object):
 
         # Maximum amount of time to run for, in seconds, per-pass.
         self.time_limit = 30
+
+        # The ride to start generating groups at.
+        self.start_ride = 0
+
+        # The last finalized ride (i.e. the last one that happened already).
+        self.finalized_ride = 0
 
 def VarName(prefix, params):
   return ('%s_' % prefix) + '_'.join(map(str, params))
@@ -90,19 +97,13 @@ class AlgorithmTM(object):
     self.prior_rosters = prior_rosters
     self.params = params
 
-    num_prior_rides = 0
-    for r in prior_rosters:
-      num_prior_rides = max(num_prior_rides, r.ride + 1)
-
     self.num_scouts = defaultdict(lambda: 0)  # map from r -> int
     for r in range(0, params.num_rides):
       for p in self.riders.AllLeaders():
         if p.IsLeader() and p.Scouted(r):
           self.num_scouts[r] += 1
 
-    # The ride to start algorithm constraints on.
-    self.start_ride = num_prior_rides
-    print('Initializing Algorithm to start at ride ', self.start_ride)
+    print('Initializing Algorithm to start at ride ', self.params.start_ride)
 
   def GetRosters(self, memberships):
     data = defaultdict(lambda: [])
@@ -156,26 +157,27 @@ class AlgorithmTM(object):
       for rider in roster.riders:
         prior_ride_true.add((roster.ride, roster.group, rider.id))
     for p in self.riders.AllRiders():
-      for r in range(0, self.start_ride):
+      for r in range(0, self.params.num_rides):
         for g in range(0, self.params.max_groups):
           if (r,g,p.id) in prior_ride_true:
             model.Add(vars.memberships[(r, g, p.id)] == 1)
           else:
-            model.Add(vars.memberships[(r, g, p.id)] == 0)
+            if r <= self.params.finalized_ride:
+                model.Add(vars.memberships[(r, g, p.id)] == 0)
 
   def AddGroupConstraints(self, model, vars):
     """
     Defines the rigid constraints on each group.
     """
     # Define target group topology for each ride.
-    for r in range(self.start_ride, self.params.num_rides):
+    for r in range(self.params.start_ride, self.params.num_rides):
       vars.num_groups[r] = model.NewIntVar(0, self.params.max_groups, VarName('num_groups', [r]))
       vars.target_size[r] = model.NewIntVar(0, self.params.max_group_size, VarName('target_size', [r]))
       vars.target_leaders[r] = model.NewIntVar(0, self.params.max_group_size, VarName('target_leaders', [r]))
       model.AddHint(vars.target_size[r], self.params.max_desirable_group_size)
       model.Add(vars.target_leaders[r] == 2)
 
-    for r in range(self.start_ride, self.params.num_rides):
+    for r in range(self.params.start_ride, self.params.num_rides):
       model.Add(vars.num_scouts[r] == self.num_scouts[r])
       for g in range(0, self.params.max_groups):
         group_size = sum(vars.groups[(r,g)])
@@ -213,7 +215,7 @@ class AlgorithmTM(object):
   def AddRiderConstraints(self, model, vars):
     # Make sure every rider is in exactly one group if they're attending the
     # ride and zero groups if they aren't.
-    for r in range(self.start_ride, self.params.num_rides):
+    for r in range(self.params.start_ride, self.params.num_rides):
       for p in self.riders.AllRiders():
         s = 0
         for g in range(0, self.params.max_groups):
@@ -221,7 +223,7 @@ class AlgorithmTM(object):
         model.Add(s == p.IsAvailable(r))
 
     # Make sure participants that need a woman leader are assigned a group with one.
-    for r in range(self.start_ride, self.params.num_rides):
+    for r in range(self.params.start_ride, self.params.num_rides):
       for p in self.riders.AllRiders():
         for g in range(0, self.params.max_groups):
           if p.NeedsWomanLeader():
@@ -233,8 +235,8 @@ class AlgorithmTM(object):
     not too big.
     '''
     penalties = []
-    for r in range(self.start_ride, self.params.num_rides):
-      for g in range(self.start_ride, self.params.max_groups):
+    for r in range(self.params.start_ride, self.params.num_rides):
+      for g in range(self.params.start_ride, self.params.max_groups):
         group_size = sum(vars.groups[(r,g)])
         group_active = vars.group_active[(r,g)]
         num_leaders = sum(vars.group_leaders[(r,g)])
@@ -245,7 +247,7 @@ class AlgorithmTM(object):
         penalties.append(size_deviates*1000)
 
     # Penalize a large target group size.
-    for r in range(self.start_ride, self.params.num_rides):
+    for r in range(self.params.start_ride, self.params.num_rides):
       target_size_too_big = model.NewBoolVar(VarName('target_size_too_big', [r]))
       model.Add(vars.target_size[r] > self.params.max_desirable_group_size).OnlyEnforceIf(target_size_too_big)
       model.Add(vars.target_size[r] <= self.params.max_desirable_group_size).OnlyEnforceIf(target_size_too_big.Not())
