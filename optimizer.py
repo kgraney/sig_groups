@@ -53,6 +53,7 @@ class Vars(object):
 
     # Map from (r, g) -> [bool]
     self.groups = defaultdict(lambda: [])
+    self.group_participants = defaultdict(lambda: [])
     self.group_leaders = defaultdict(lambda: [])
     self.group_leaders_experienced = defaultdict(lambda: [])
     self.group_leaders_scouted = defaultdict(lambda: [])
@@ -144,6 +145,8 @@ class AlgorithmTM(object):
               num_scouts_group.append(me)
             if p.gender == 'F':
               vars.group_leaders_female[(r,g)].append(me)
+          else:
+            vars.group_participants[(r,g)].append(me)
 
         group_has_scout = model.NewBoolVar(VarName('group_has_scout', [r, g]))
         model.Add(sum(num_scouts_group) >= 1).OnlyEnforceIf(group_has_scout)
@@ -211,6 +214,14 @@ class AlgorithmTM(object):
         model.AddLinearConstraint(group_size - vars.target_size[r], 0, 1).OnlyEnforceIf(group_active)
         model.AddLinearConstraint(num_leaders - vars.target_leaders[r], 0, 1).OnlyEnforceIf(group_active)
 
+    # Make sure that groups with more leaders don't have fewer participants.
+    for r in range(self.params.start_ride, self.params.num_rides):
+      for g1 in range(0, self.params.max_groups):
+        for g2 in range(0, self.params.max_groups):
+            g1_has_more_leaders = model.NewBoolVar(VarName('more_leaders', [r, g1, g2]))
+            model.Add(sum(vars.group_leaders[(r,g1)]) > sum(vars.group_leaders[(r,g2)])).OnlyEnforceIf(g1_has_more_leaders)
+            model.Add(sum(vars.group_leaders[(r,g1)]) <= sum(vars.group_leaders[(r,g2)])).OnlyEnforceIf(g1_has_more_leaders.Not())
+            model.Add(sum(vars.group_participants[(r,g1)]) >= sum(vars.group_participants[(r,g2)])).OnlyEnforceIf(g1_has_more_leaders)
 
   def AddRiderConstraints(self, model, vars):
     # Make sure every rider is in exactly one group if they're attending the
