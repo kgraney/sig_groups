@@ -5,7 +5,7 @@ def PrintAvailabilityTable(riders, num_rides):
     for r in range(0, num_rides):
         s.append('Ride %d' % (r + 1))
     print(("{: <25} " + "{: <10}"*num_rides).format('', *s))
-    for p in riders:
+    for p in sorted(riders, key=lambda x: x.name):
         avails = []
         for r in range(0, num_rides):
             avails.append(p.IsAvailable(r))
@@ -17,7 +17,7 @@ def PrintRosters(rosters):
     for r in rosters:
         by_ride[r.ride].append(r)
 
-    for ride, rs in by_ride.items():
+    for ride, rs in sorted(by_ride.items()):
         print('\n\nRide %d' % (ride+1))
         rows = max(len(r) for r in rs)
         cols = len(rs)
