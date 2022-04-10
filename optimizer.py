@@ -281,8 +281,10 @@ class AlgorithmTM(object):
     print("Number of riders: ", len(self.riders.AllFtRiders()))
     print("Number of total rider pairings: ", len(all_pairs))
     print()
-    assert(len(all_pairs) == math.factorial(len(self.riders.AllFtRiders()))/
-           math.factorial(2)/math.factorial(len(self.riders.AllFtRiders())-2))
+    assert(math.isclose(len(all_pairs),
+           math.factorial(len(self.riders.AllFtRiders()))/
+           math.factorial(2)/
+           math.factorial(len(self.riders.AllFtRiders())-2)))
 
     # For each pair of riders we create a boolean that represents if these
     # riders have ridden together.
