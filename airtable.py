@@ -75,7 +75,7 @@ def _CreateParticipant(json):
       p.mentor = json['fields']['Mentor'][0]
     except KeyError: pass
     try:
-      p.status = json['fields']['status']
+      p.status = json['fields']['Status']
     except KeyError: pass
 
     if p.status == 'Progressing':
@@ -103,11 +103,11 @@ def _CreateMatch(json):
     obj = Match(*ps)
     words = json['fields']['Match']
     if words == 'Bad Match':
-        obj.score = -1000
+        obj.score = -50
     elif words == 'Good Match':
-        obj.score = 300
+        obj.score = 50
     elif words == 'Meh Match':
-        obj.score = -100
+        obj.score = -10
     return obj
 
 def LoadLeaders():
@@ -130,4 +130,17 @@ def GetPriorRosters(data):
     rosters.append(Roster(ride, group, riders))
   return rosters
 
-
+def CreateRoster(roster):
+  leaders = [x.id for x in roster.riders if x.IsLeader()]
+  participants = [x.id for x in roster.riders if not x.IsLeader()]
+  record = {
+      'fields': {
+          'Ride': [RideNumToAirtableId(roster.ride)],
+          'Group': roster.group,
+          'Leaders': leaders,
+          'Participants': participants,
+      }
+  }
+  print(record)
+  resp = _PostAirtable('Rosters', { 'records': [record] })
+  print(resp.content)
