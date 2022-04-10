@@ -12,7 +12,7 @@ class Roster(object):
       if r.IsLeader():
           l = 'L'
           l += '*' if r.experienced else ' '
-      return ('   ' + l + ' ' + r.gender + ' ' + r.name + ' ' + r.status)
+      return ('   ' + l + ' ' + r.gender + ' ' + r.name)
 
     def __len__(self):
       return len(self.riders)

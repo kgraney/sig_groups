@@ -8,9 +8,6 @@ class Rider(object):
     self.availability = set()
     self.status = ''
 
-  def Invalid(self):
-    return len(self.availability) == 0
-
   def IsLeader(self):
     return False
 
@@ -36,6 +33,9 @@ class Leader(Rider):
   def Scouted(self, ride):
     return ride in self.scouted
 
+  def Ignore(self):
+    return self.part_time
+
 class Participant(Rider):
   def __init__(self, id, name):
     super().__init__(id, name)
@@ -46,6 +46,8 @@ class Participant(Rider):
   def NeedsWomanLeader(self):
     return self.woman_leader_req
 
+  def Ignore(self):
+    return self.status == 'O'
 
 class RiderData(object):
   def __init__(self, leaders, participants, matches):
@@ -66,9 +68,7 @@ class RiderData(object):
   def AllFtRiders(self):
     result = []
     for v in self.rider_map.values():
-      if isinstance(v, Leader) and v.part_time:
-        continue
-      if v.Invalid():
+      if v.Ignore():
         continue
       result.append(v)
     return result
