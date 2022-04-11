@@ -108,6 +108,8 @@ def _CreateMatch(json):
         obj.score = 50
     elif words == 'Meh Match':
         obj.score = -10
+    elif words == 'Couple':
+        obj.couple = True
     return obj
 
 def LoadLeaders():

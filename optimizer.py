@@ -374,6 +374,10 @@ class AlgorithmTM(object):
           model.AddBoolOr(paired_on_ride)
 
         scores.append(self.riders.GetMatchScore(p1, p2) * vars.paired[(p1, p2)])
+        if r == 9:
+          scores.append(10*self.riders.IsCouple(p1, p2) * vars.paired[(p1, p2)])
+        else:
+          scores.append(-10*self.riders.IsCouple(p1, p2) * vars.paired[(p1, p2)])
 
       model.AddBoolOr(paired_in_group).OnlyEnforceIf(vars.paired[(p1, p2)])
       model.AddBoolAnd(not_paired_in_group).OnlyEnforceIf(vars.paired[(p1, p2)].Not())
@@ -381,7 +385,7 @@ class AlgorithmTM(object):
       bonus_pairs = model.NewIntVar(0, self.params.num_rides,
                                     VarName('bonus_pairs', [p1, p2]))
       model.AddAbsEquality(bonus_pairs, 1 - sum(paired_in_group))
-      scores.append(-2*bonus_pairs)
+      scores.append(-5*bonus_pairs)
 
     model.Maximize(sum(vars.paired.values()) + sum(scores))
 

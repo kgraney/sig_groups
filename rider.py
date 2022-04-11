@@ -57,10 +57,12 @@ class RiderData(object):
     for x in participants:
       self.rider_map[x.id] = x
 
-    self.matches = {}  # map from (id, id) -> score
+    self.matches = {}  # map from (id, id) -> Match
     for m in matches:
-      self.matches[(m.p1, m.p2)] = m.score
-      self.matches[(m.p2, m.p1)] = m.score
+      self.matches[(m.p1, m.p2)] = m
+      self.matches[(m.p2, m.p1)] = m
+
+    self.couples = set()
 
   def AllRiders(self):
     return self.rider_map.values()
@@ -69,6 +71,14 @@ class RiderData(object):
     result = []
     for v in self.rider_map.values():
       if v.Ignore():
+        continue
+      result.append(v)
+    return result
+
+  def AllFtParticipants(self):
+    result = []
+    for v in self.rider_map.values():
+      if v.Ignore() or v.IsLeader():
         continue
       result.append(v)
     return result
@@ -89,9 +99,15 @@ class RiderData(object):
 
   def GetMatchScore(self, p1, p2):
     try:
-      return self.matches[(p1, p2)]
+      return self.matches[(p1, p2)].score
     except KeyError:
       return 1
+
+  def IsCouple(self, p1, p2):
+    try:
+      return self.matches[(p1, p2)].couple
+    except KeyError:
+      return False
 
   def Rider(self, id):
     return self.rider_map[id]
@@ -101,3 +117,4 @@ class Match(object):
     self.p1 = p1
     self.p2 = p2
     self.score = 0
+    self.couple = False
