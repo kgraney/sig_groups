@@ -11,11 +11,7 @@ from sig_groups.formatting import PrintRosters
 class Params(object):
     def __init__(self):
         # Hard limits on group sizes.
-        self.min_group_size = 4
         self.max_group_size = 20
-
-        # Soft limit on max group size.
-        self.max_desirable_group_size = 7
 
         # The maximum number of groups to assign each week.
         self.max_groups = 8
@@ -98,11 +94,20 @@ class AlgorithmTM(object):
     self.prior_rosters = prior_rosters
     self.params = params
 
-    self.num_scouts = defaultdict(lambda: 0)  # map from r -> int
+    # map from r -> int
+    self.num_scouts = defaultdict(lambda: 0)
+    num_available_leaders = defaultdict(lambda: 0)
+    self.ideal_num_groups = defaultdict(lambda: 0)
+    self.num_scouts = defaultdict(lambda: 0)
     for r in range(0, params.num_rides):
       for p in self.riders.AllLeaders():
         if p.IsLeader() and p.Scouted(r):
           self.num_scouts[r] += 1
+        if p.IsAvailable(r):
+          num_available_leaders[r] += 1
+
+    for r in range(0, params.num_rides):
+      self.ideal_num_groups[r] = int(num_available_leaders[r] / 2)
 
     print('Initializing Algorithm to start at ride ', self.params.start_ride)
 
@@ -177,8 +182,8 @@ class AlgorithmTM(object):
       vars.num_groups[r] = model.NewIntVar(0, self.params.max_groups, VarName('num_groups', [r]))
       vars.target_size[r] = model.NewIntVar(0, self.params.max_group_size, VarName('target_size', [r]))
       vars.target_leaders[r] = model.NewIntVar(0, self.params.max_group_size, VarName('target_leaders', [r]))
-      model.AddHint(vars.target_size[r], self.params.max_desirable_group_size)
-      model.Add(vars.target_leaders[r] == 2)
+      model.AddHint(vars.num_groups[r], self.ideal_num_groups[r])
+      model.AddHint(vars.target_leaders[r], 2)
 
     for r in range(self.params.start_ride, self.params.num_rides):
       model.Add(vars.num_scouts[r] == self.num_scouts[r])
@@ -197,10 +202,6 @@ class AlgorithmTM(object):
         # If the group isn't active it must be empty.
         model.Add(group_size == 0).OnlyEnforceIf(group_active.Not())
 
-        # Hard limits on group size.
-        model.Add(group_size >= self.params.min_group_size).OnlyEnforceIf(group_active)
-        model.Add(group_size <= self.params.max_group_size).OnlyEnforceIf(group_active)
-
         # Each group must have at least two leaders, and at least one
         # experienced leader.
         model.Add(sum(vars.group_leaders[(r,g)]) >= 2).OnlyEnforceIf(group_active)
@@ -211,8 +212,19 @@ class AlgorithmTM(object):
         model.Add(sum(vars.groups_genders[(r,g)]['M']) != 1).OnlyEnforceIf(group_active)
 
         # Hard limit on even group sizes / number of leaders.
-        model.AddLinearConstraint(group_size - vars.target_size[r], 0, 1).OnlyEnforceIf(group_active)
+        model.AddLinearConstraint(group_size - vars.target_size[r], 0, 3).OnlyEnforceIf(group_active)
         model.AddLinearConstraint(num_leaders - vars.target_leaders[r], 0, 1).OnlyEnforceIf(group_active)
+
+    # Make sure at least one group has num_leaders = target_leaders.
+    for r in range(self.params.start_ride, self.params.num_rides):
+      equal_target_leaders = []
+      for g in range(0, self.params.max_groups):
+        num_leaders = sum(vars.group_leaders[(r,g)])
+        eqtl = model.NewBoolVar(VarName('eqtl', [r, g]))
+        model.Add(num_leaders == vars.target_leaders[r]).OnlyEnforceIf(eqtl)
+        model.Add(num_leaders != vars.target_leaders[r]).OnlyEnforceIf(eqtl.Not())
+        equal_target_leaders.append(eqtl)
+      model.Add(sum(equal_target_leaders) >= 1)
 
     # Make sure that groups with more leaders don't have fewer participants.
     for r in range(self.params.start_ride, self.params.num_rides):
@@ -247,22 +259,27 @@ class AlgorithmTM(object):
     '''
     penalties = []
     for r in range(self.params.start_ride, self.params.num_rides):
-      for g in range(self.params.start_ride, self.params.max_groups):
+      # Have the minimum number of target_leaders for each group.
+      model.Add(vars.target_leaders[r] >= 2)
+
+      # Don't have too many target leaders.
+      leader_penalty = model.NewIntVar(0, len(self.riders.AllLeaders()),
+                                       VarName('leader_penalty', [r]))
+      model.AddAbsEquality(leader_penalty, vars.target_leaders[r] - 2)
+      penalties.append(100*leader_penalty)
+
+      # Penalize groups that stray too far from the target size.
+      for g in range(0, self.params.max_groups):
         group_size = sum(vars.groups[(r,g)])
         group_active = vars.group_active[(r,g)]
-        num_leaders = sum(vars.group_leaders[(r,g)])
-
-        # Don't stray too far from the target group size.
-        size_deviates = model.NewBoolVar(VarName('size_deviates', [r, g]))
-        model.AddLinearConstraint(group_size - vars.target_size[r], 0, 2).OnlyEnforceIf(size_deviates)
-        penalties.append(size_deviates*1000)
-
-    # Penalize a large target group size.
-    for r in range(self.params.start_ride, self.params.num_rides):
-      target_size_too_big = model.NewBoolVar(VarName('target_size_too_big', [r]))
-      model.Add(vars.target_size[r] > self.params.max_desirable_group_size).OnlyEnforceIf(target_size_too_big)
-      model.Add(vars.target_size[r] <= self.params.max_desirable_group_size).OnlyEnforceIf(target_size_too_big.Not())
-      penalties.append(target_size_too_big*100000)
+        group_size_penalty = model.NewIntVar(0, len(self.riders.AllLeaders()),
+                                             VarName('group_size_penalty', [r, g]))
+        model.AddAbsEquality(group_size_penalty, group_size - vars.target_size[r])
+        group_size_p2 = model.NewIntVar(0, len(self.riders.AllLeaders()),
+                                        VarName('group_size_p2', [r, g]))
+        model.Add(group_size_p2 == group_size_penalty).OnlyEnforceIf(group_active)
+        model.Add(group_size_p2 == 0).OnlyEnforceIf(group_active.Not())
+        penalties.append(group_size_p2)
 
     model.Minimize(sum(penalties))
 
@@ -340,11 +357,31 @@ class AlgorithmTM(object):
             p1_obj.IsAvailable(r) and p2_obj.IsAvailable(r)):
           print('Adding ride %d mentor constraint for'%r, p1_obj.name, p2_obj.name)
           model.AddBoolOr(paired_on_ride)
+        if (r == 4 and MentorPair(p1, p2) and
+            (not p1_obj.IsAvailable(1) or not p2_obj.IsAvailable(1)) and
+            (not p1_obj.IsAvailable(2) or not p2_obj.IsAvailable(2)) and
+            (not p1_obj.IsAvailable(3) or not p2_obj.IsAvailable(3)) and
+            p1_obj.IsAvailable(r) and p2_obj.IsAvailable(r)):
+          print('Adding ride %d mentor constraint for'%r, p1_obj.name, p2_obj.name)
+          model.AddBoolOr(paired_on_ride)
+        if (r == 5 and MentorPair(p1, p2) and
+            (not p1_obj.IsAvailable(1) or not p2_obj.IsAvailable(1)) and
+            (not p1_obj.IsAvailable(2) or not p2_obj.IsAvailable(2)) and
+            (not p1_obj.IsAvailable(3) or not p2_obj.IsAvailable(3)) and
+            (not p1_obj.IsAvailable(4) or not p2_obj.IsAvailable(4)) and
+            p1_obj.IsAvailable(r) and p2_obj.IsAvailable(r)):
+          print('Adding ride %d mentor constraint for'%r, p1_obj.name, p2_obj.name)
+          model.AddBoolOr(paired_on_ride)
+
+        scores.append(self.riders.GetMatchScore(p1, p2) * vars.paired[(p1, p2)])
 
       model.AddBoolOr(paired_in_group).OnlyEnforceIf(vars.paired[(p1, p2)])
       model.AddBoolAnd(not_paired_in_group).OnlyEnforceIf(vars.paired[(p1, p2)].Not())
 
-      scores.append(self.riders.GetMatchScore(p1, p2) * vars.paired[(p1, p2)])
+      bonus_pairs = model.NewIntVar(0, self.params.num_rides,
+                                    VarName('bonus_pairs', [p1, p2]))
+      model.AddAbsEquality(bonus_pairs, 1 - sum(paired_in_group))
+      scores.append(-2*bonus_pairs)
 
     model.Maximize(sum(vars.paired.values()) + sum(scores))
 
@@ -398,8 +435,8 @@ class AlgorithmTM(object):
     for (k,vs) in vars.target_size.items():
       vn = vars.num_groups[k]
       vl = vars.target_leaders[k]
-      print('Ride %d >> %d groups : target_size %d and target_leaders %d' %
-            (k, solver.Value(vn), solver.Value(vs), solver.Value(vl)))
+      print('Ride %d >> %d num_groups (ideal %d) : target_size %d and target_leaders %d' %
+            (k+1, solver.Value(vn), self.ideal_num_groups[k], solver.Value(vs), solver.Value(vl)))
 
     hints = vars.RecordHints(solver)
     print()
