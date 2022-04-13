@@ -359,7 +359,7 @@ class AlgorithmTM(object):
         else:
           scores.append(-20*self.riders.IsCouple(p1, p2) * sum(paired_on_ride))
 
-      if not p1_obj.Invalid() and not p2_obj.Invalid():
+      if not p1_obj.Ignore() and not p2_obj.Ignore():
         model.AddBoolOr(paired_in_group).OnlyEnforceIf(vars.paired[(p1, p2)])
         model.AddBoolAnd(not_paired_in_group).OnlyEnforceIf(vars.paired[(p1, p2)].Not())
 
