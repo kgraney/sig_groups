@@ -291,17 +291,17 @@ class AlgorithmTM(object):
     # Compute the set of all possible pairs of riders, and then we try to
     # optimize for including as many pairs as possible in the rosters.
     all_pairs = set()
-    for p1 in self.riders.AllFtRiders():
-      for p2 in self.riders.AllFtRiders():
+    for p1 in self.riders.AllRiders():
+      for p2 in self.riders.AllRiders():
         if (p1.id != p2.id and (p2.id, p1.id) not in all_pairs):
           all_pairs.add((p1.id, p2.id))
-    print("Number of riders: ", len(self.riders.AllFtRiders()))
+    print("Number of riders: ", len(self.riders.AllRiders()))
     print("Number of total rider pairings: ", len(all_pairs))
     print()
     assert(math.isclose(len(all_pairs),
-           math.factorial(len(self.riders.AllFtRiders()))/
+           math.factorial(len(self.riders.AllRiders()))/
            math.factorial(2)/
-           math.factorial(len(self.riders.AllFtRiders())-2)))
+           math.factorial(len(self.riders.AllRiders())-2)))
 
     # For each pair of riders we create a boolean that represents if these
     # riders have ridden together.
@@ -342,50 +342,31 @@ class AlgorithmTM(object):
         # For ride 2 force mentor/mentee pairings.
         p1_obj = self.riders.Rider(p1)
         p2_obj = self.riders.Rider(p2)
-        if (r == 1 and MentorPair(p1, p2) and
-            p1_obj.IsAvailable(r) and p2_obj.IsAvailable(r)):
-          print('Adding ride %d mentor constraint for'%r, p1_obj.name, p2_obj.name)
-          model.AddBoolOr(paired_on_ride)
-        if (r == 2 and MentorPair(p1, p2) and
-            (not p1_obj.IsAvailable(1) or not p2_obj.IsAvailable(1)) and
-            p1_obj.IsAvailable(r) and p2_obj.IsAvailable(r)):
-          print('Adding ride %d mentor constraint for'%r, p1_obj.name, p2_obj.name)
-          model.AddBoolOr(paired_on_ride)
-        if (r == 3 and MentorPair(p1, p2) and
-            (not p1_obj.IsAvailable(1) or not p2_obj.IsAvailable(1)) and
-            (not p1_obj.IsAvailable(2) or not p2_obj.IsAvailable(2)) and
-            p1_obj.IsAvailable(r) and p2_obj.IsAvailable(r)):
-          print('Adding ride %d mentor constraint for'%r, p1_obj.name, p2_obj.name)
-          model.AddBoolOr(paired_on_ride)
-        if (r == 4 and MentorPair(p1, p2) and
-            (not p1_obj.IsAvailable(1) or not p2_obj.IsAvailable(1)) and
-            (not p1_obj.IsAvailable(2) or not p2_obj.IsAvailable(2)) and
-            (not p1_obj.IsAvailable(3) or not p2_obj.IsAvailable(3)) and
-            p1_obj.IsAvailable(r) and p2_obj.IsAvailable(r)):
-          print('Adding ride %d mentor constraint for'%r, p1_obj.name, p2_obj.name)
-          model.AddBoolOr(paired_on_ride)
-        if (r == 5 and MentorPair(p1, p2) and
-            (not p1_obj.IsAvailable(1) or not p2_obj.IsAvailable(1)) and
-            (not p1_obj.IsAvailable(2) or not p2_obj.IsAvailable(2)) and
-            (not p1_obj.IsAvailable(3) or not p2_obj.IsAvailable(3)) and
-            (not p1_obj.IsAvailable(4) or not p2_obj.IsAvailable(4)) and
-            p1_obj.IsAvailable(r) and p2_obj.IsAvailable(r)):
-          print('Adding ride %d mentor constraint for'%r, p1_obj.name, p2_obj.name)
-          model.AddBoolOr(paired_on_ride)
+        for mr in range(1, self.params.num_rides):
+            not_previously_available = True
+            for mrp in range(1, mr):
+                not_previously_available = (not_previously_available and
+                    (not p1_obj.IsAvailable(mrp) or not p2_obj.IsAvailable(mrp)))
+            if (r == mr and MentorPair(p1, p2) and
+                p1_obj.IsAvailable(r) and p2_obj.IsAvailable(r) and
+                not_previously_available):
+              print('Adding ride %d mentor constraint for'%r, p1_obj.name, p2_obj.name)
+              model.AddBoolOr(paired_on_ride)
 
-        scores.append(self.riders.GetMatchScore(p1, p2) * vars.paired[(p1, p2)])
+        scores.append(self.riders.GetMatchScore(p1, p2) * sum(paired_on_ride))
         if r == 9:
-          scores.append(10*self.riders.IsCouple(p1, p2) * vars.paired[(p1, p2)])
+          scores.append(20*self.riders.IsCouple(p1, p2) * sum(paired_on_ride))
         else:
-          scores.append(-10*self.riders.IsCouple(p1, p2) * vars.paired[(p1, p2)])
+          scores.append(-20*self.riders.IsCouple(p1, p2) * sum(paired_on_ride))
 
-      model.AddBoolOr(paired_in_group).OnlyEnforceIf(vars.paired[(p1, p2)])
-      model.AddBoolAnd(not_paired_in_group).OnlyEnforceIf(vars.paired[(p1, p2)].Not())
+      if not p1_obj.Invalid() and not p2_obj.Invalid():
+        model.AddBoolOr(paired_in_group).OnlyEnforceIf(vars.paired[(p1, p2)])
+        model.AddBoolAnd(not_paired_in_group).OnlyEnforceIf(vars.paired[(p1, p2)].Not())
 
       bonus_pairs = model.NewIntVar(0, self.params.num_rides,
                                     VarName('bonus_pairs', [p1, p2]))
       model.AddAbsEquality(bonus_pairs, 1 - sum(paired_in_group))
-      scores.append(-5*bonus_pairs)
+      scores.append(-10*bonus_pairs)
 
     model.Maximize(sum(vars.paired.values()) + sum(scores))
 
