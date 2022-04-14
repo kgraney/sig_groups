@@ -161,16 +161,19 @@ class AlgorithmTM(object):
 
     # Constrain historical rosters to what they were.
     prior_ride_true = set()
+    finalized = set()
     for roster in self.prior_rosters:
       for rider in roster.riders:
         prior_ride_true.add((roster.ride, roster.group, rider.id))
+      if roster.finalized:
+        finalized.add((roster.ride, roster.group))
     for p in self.riders.AllRiders():
       for r in range(0, self.params.num_rides):
         for g in range(0, self.params.max_groups):
           if (r,g,p.id) in prior_ride_true:
             model.Add(vars.memberships[(r, g, p.id)] == 1)
           else:
-            if r <= self.params.finalized_ride:
+            if r <= self.params.finalized_ride or (r,g) in finalized:
                 model.Add(vars.memberships[(r, g, p.id)] == 0)
 
   def AddGroupConstraints(self, model, vars):
@@ -212,7 +215,7 @@ class AlgorithmTM(object):
         model.Add(sum(vars.groups_genders[(r,g)]['M']) != 1).OnlyEnforceIf(group_active)
 
         # Hard limit on even group sizes / number of leaders.
-        model.AddLinearConstraint(group_size - vars.target_size[r], 0, 3).OnlyEnforceIf(group_active)
+        model.AddLinearConstraint(group_size - vars.target_size[r], 0, 1).OnlyEnforceIf(group_active)
         model.AddLinearConstraint(num_leaders - vars.target_leaders[r], 0, 1).OnlyEnforceIf(group_active)
 
     # Make sure at least one group has num_leaders = target_leaders.

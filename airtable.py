@@ -105,9 +105,9 @@ def _CreateMatch(json):
     if words == 'Bad Match':
         obj.score = -50
     elif words == 'Good Match':
-        obj.score = 50
+        obj.score = 5
     elif words == 'Meh Match':
-        obj.score = -10
+        obj.score = -5
     elif words == 'Couple':
         obj.couple = True
     return obj
@@ -129,7 +129,10 @@ def GetPriorRosters(data):
     ride = AirtableIdToRideNum(r['fields']['Ride'][0])
     riders = [data.Rider(x)
               for x in r['fields']['Leaders'] + r['fields']['Participants']]
-    rosters.append(Roster(ride, group, riders))
+    finalized = False
+    if 'Finalized' in r['fields'] and r['fields']['Finalized'] == True:
+       finalized = True
+    rosters.append(Roster(ride, group, riders, finalized))
   return rosters
 
 def CreateRoster(roster):

@@ -1,10 +1,11 @@
 from sig_groups.rider import Leader, Participant
 
 class Roster(object):
-    def __init__(self, ride, group, riders):
+    def __init__(self, ride, group, riders, finalized=False):
         self.ride = ride
         self.group = group
         self.riders = riders
+        self.finalized = finalized
 
     def GetRiderStr(self, i):
       r = self.riders[i]
