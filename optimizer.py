@@ -350,7 +350,8 @@ class AlgorithmTM(object):
             for mrp in range(1, mr):
                 not_previously_available = (not_previously_available and
                     (not p1_obj.IsAvailable(mrp) or not p2_obj.IsAvailable(mrp)))
-            if (r == mr and MentorPair(p1, p2) and
+            if (r >= self.params.start_ride and
+                r == mr and MentorPair(p1, p2) and
                 p1_obj.IsAvailable(r) and p2_obj.IsAvailable(r) and
                 not_previously_available):
               print('Adding ride %d mentor constraint for'%r, p1_obj.name, p2_obj.name)
