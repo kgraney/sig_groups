@@ -127,8 +127,11 @@ def GetPriorRosters(data):
   for r in response.json()['records']:
     group = r['fields']['Group']
     ride = AirtableIdToRideNum(r['fields']['Ride'][0])
-    riders = [data.Rider(x)
-              for x in r['fields']['Leaders'] + r['fields']['Participants']]
+    riders = []
+    if 'Leaders' in r['fields']:
+        riders.extend([data.Rider(x) for x in r['fields']['Leaders']])
+    if 'Participants' in r['fields']:
+        riders.extend([data.Rider(x) for x in r['fields']['Participants']])
     finalized = False
     if 'Finalized' in r['fields'] and r['fields']['Finalized'] == True:
        finalized = True
