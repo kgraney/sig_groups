@@ -143,7 +143,7 @@ class AlgorithmTM(object):
           vars.groups_genders[(r,g)][p.gender].append(me)
           if p.IsLeader():
             vars.group_leaders[(r,g)].append(me)
-            if p.experienced:
+            if p.type == Leader.Type.EXPERIENCED:
               vars.group_leaders_experienced[(r,g)].append(me)
             if p.Scouted(r):
               vars.group_leaders_scouted[(r,g)].append(me)

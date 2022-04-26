@@ -8,12 +8,7 @@ class Roster(object):
         self.finalized = finalized
 
     def GetRiderStr(self, i):
-      r = self.riders[i]
-      l = '  '
-      if r.IsLeader():
-          l = 'L'
-          l += '*' if r.experienced else ' '
-      return ('   ' + l + ' ' + r.gender + ' ' + r.name)
+      return ('   ' + self.riders[i].RosterString())
 
     def __len__(self):
       return len(self.riders)

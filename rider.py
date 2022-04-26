@@ -1,4 +1,5 @@
 from collections import defaultdict
+from enum import Enum
 
 class Rider(object):
   def __init__(self, id, name):
@@ -20,10 +21,19 @@ class Rider(object):
   def IsAvailable(self, ride_num):
     return ride_num in self.availability
 
+  def RosterString(self):
+    return ('   ' + self.gender + ' ' + self.name)
+
+
 class Leader(Rider):
+  class Type(Enum):
+    EXPERIENCED = 1
+    NEW = 2
+    INEXPERIENCED = 3
+
   def __init__(self, id, name):
     super().__init__(id, name)
-    self.experienced = False
+    self.type = Leader.Type.NEW
     self.part_time = False
     self.scouted = set()
 
@@ -35,6 +45,17 @@ class Leader(Rider):
 
   def Ignore(self):
     return self.part_time
+
+  def RosterString(self):
+    l = 'L'
+    if self.type == Leader.Type.EXPERIENCED:
+        l += '*'
+    elif self.type == Leader.Type.INEXPERIENCED:
+        l += '-'
+    else:
+        l += ' '
+    return (l + ' ' + self.gender + ' ' + self.name)
+
 
 class Participant(Rider):
   def __init__(self, id, name):

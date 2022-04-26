@@ -65,7 +65,11 @@ def _CreateLeader(json):
     if len(l.availability) < 5:
       l.part_time = True
     if json['fields']['Experience'] == 'Experienced Leader':
-      l.experienced = True
+      l.type = Leader.Type.EXPERIENCED
+    elif json['fields']['Experience'] == 'Inexperienced Leader':
+      l.type = Leader.Type.INEXPERIENCED
+    elif json['fields']['Experience'] == 'New Leader':
+      l.type = Leader.Type.NEW
     return l
 
 def _CreateParticipant(json):
