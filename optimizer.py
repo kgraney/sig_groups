@@ -41,8 +41,8 @@ class Vars(object):
 
     # Map from r -> int
     self.num_groups = {}
-    self.target_size = {}
     self.target_leaders = {}
+    self.target_participants = {}
     self.num_scouts = {}
 
     ### Derived variables.
@@ -52,6 +52,7 @@ class Vars(object):
     self.group_participants = defaultdict(lambda: [])
     self.group_leaders = defaultdict(lambda: [])
     self.group_leaders_experienced = defaultdict(lambda: [])
+    self.group_leaders_inexperienced = defaultdict(lambda: [])
     self.group_leaders_scouted = defaultdict(lambda: [])
     self.group_leaders_female = defaultdict(lambda: [])
 
@@ -60,7 +61,6 @@ class Vars(object):
 
     # Map from (p1, p2) -> bool indicating that these two people rode together.
     self.paired = {}
-
   def RecordHints(self, solver):
     hints = {}
     def log_map(name, var):
@@ -70,7 +70,7 @@ class Vars(object):
     log_map("memberships", self.memberships)
     log_map("group_active", self.group_active)
     log_map("num_groups", self.num_groups)
-    log_map("target_size", self.target_size)
+    log_map("target_participants", self.target_participants)
     log_map("target_leaders", self.target_leaders)
     return hints
 
@@ -85,8 +85,25 @@ class Vars(object):
     restore("memberships", self.memberships)
     restore("group_active", self.group_active, constraint=True)
     restore("num_groups", self.num_groups, constraint=True)
-    restore("target_size", self.target_size, constraint=True)
+    restore("target_participants", self.target_participants, constraint=True)
     restore("target_leaders", self.target_leaders, constraint=True)
+
+class Printer(cp_model.CpSolverSolutionCallback):
+  def __init__(self, vars):
+    cp_model.CpSolverSolutionCallback.__init__(self)
+    self.vars = vars
+
+  def on_solution_callback(self):
+    print("New solution!")
+
+    memberships = []
+    for (k,v) in self.vars.memberships.items():
+      if (self.Value(v)):
+        memberships.append(k)
+    print('----------------------------')
+    print(memberships)
+    print('============================')
+
 
 class AlgorithmTM(object):
   def __init__(self, riders, prior_rosters, params):
@@ -97,7 +114,6 @@ class AlgorithmTM(object):
     # map from r -> int
     self.num_scouts = defaultdict(lambda: 0)
     num_available_leaders = defaultdict(lambda: 0)
-    self.ideal_num_groups = defaultdict(lambda: 0)
     self.num_scouts = defaultdict(lambda: 0)
     for r in range(0, params.num_rides):
       for p in self.riders.AllLeaders():
@@ -105,9 +121,6 @@ class AlgorithmTM(object):
           self.num_scouts[r] += 1
         if p.IsAvailable(r):
           num_available_leaders[r] += 1
-
-    for r in range(0, params.num_rides):
-      self.ideal_num_groups[r] = int(num_available_leaders[r] / 2)
 
     print('Initializing Algorithm to start at ride ', self.params.start_ride)
 
@@ -145,6 +158,8 @@ class AlgorithmTM(object):
             vars.group_leaders[(r,g)].append(me)
             if p.type == Leader.Type.EXPERIENCED:
               vars.group_leaders_experienced[(r,g)].append(me)
+            if p.type == Leader.Type.INEXPERIENCED:
+              vars.group_leaders_inexperienced[(r,g)].append(me)
             if p.Scouted(r):
               vars.group_leaders_scouted[(r,g)].append(me)
               num_scouts_group.append(me)
@@ -183,10 +198,8 @@ class AlgorithmTM(object):
     # Define target group topology for each ride.
     for r in range(self.params.start_ride, self.params.num_rides):
       vars.num_groups[r] = model.NewIntVar(0, self.params.max_groups, VarName('num_groups', [r]))
-      vars.target_size[r] = model.NewIntVar(0, self.params.max_group_size, VarName('target_size', [r]))
+      vars.target_participants[r] = model.NewIntVar(0, self.params.max_group_size, VarName('target_participants', [r]))
       vars.target_leaders[r] = model.NewIntVar(0, self.params.max_group_size, VarName('target_leaders', [r]))
-      model.AddHint(vars.num_groups[r], self.ideal_num_groups[r])
-      model.AddHint(vars.target_leaders[r], 2)
 
     for r in range(self.params.start_ride, self.params.num_rides):
       model.Add(vars.num_scouts[r] == self.num_scouts[r])
@@ -194,6 +207,7 @@ class AlgorithmTM(object):
         group_size = sum(vars.groups[(r,g)])
         group_active = vars.group_active[(r,g)]
         num_leaders = sum(vars.group_leaders[(r,g)])
+        num_participants = sum(vars.group_participants[(r,g)])
 
         # Make sure we're setting exactly num_groups for the given ride.
         too_many_groups = model.NewBoolVar(VarName('too_many_groups', [r, g]))
@@ -215,19 +229,8 @@ class AlgorithmTM(object):
         model.Add(sum(vars.groups_genders[(r,g)]['M']) != 1).OnlyEnforceIf(group_active)
 
         # Hard limit on even group sizes / number of leaders.
-        model.AddLinearConstraint(group_size - vars.target_size[r], 0, 1).OnlyEnforceIf(group_active)
+        model.AddLinearConstraint(num_participants - vars.target_participants[r], 0, 1).OnlyEnforceIf(group_active)
         model.AddLinearConstraint(num_leaders - vars.target_leaders[r], 0, 1).OnlyEnforceIf(group_active)
-
-    # Make sure at least one group has num_leaders = target_leaders.
-    for r in range(self.params.start_ride, self.params.num_rides):
-      equal_target_leaders = []
-      for g in range(0, self.params.max_groups):
-        num_leaders = sum(vars.group_leaders[(r,g)])
-        eqtl = model.NewBoolVar(VarName('eqtl', [r, g]))
-        model.Add(num_leaders == vars.target_leaders[r]).OnlyEnforceIf(eqtl)
-        model.Add(num_leaders != vars.target_leaders[r]).OnlyEnforceIf(eqtl.Not())
-        equal_target_leaders.append(eqtl)
-      model.Add(sum(equal_target_leaders) >= 1)
 
     # Make sure that groups with more leaders don't have fewer participants.
     for r in range(self.params.start_ride, self.params.num_rides):
@@ -269,20 +272,25 @@ class AlgorithmTM(object):
       leader_penalty = model.NewIntVar(0, len(self.riders.AllLeaders()),
                                        VarName('leader_penalty', [r]))
       model.AddAbsEquality(leader_penalty, vars.target_leaders[r] - 2)
-      penalties.append(100*leader_penalty)
+      penalties.append(leader_penalty)
 
-      # Penalize groups that stray too far from the target size.
+      # Don't stray too far from 4 target participants.
+      participant_penalty = model.NewIntVar(0, len(self.riders.AllParticipants()),
+                                            VarName('participant_penalty', [r]))
+      model.AddAbsEquality(participant_penalty, vars.target_participants[r] - 4)
+      penalties.append(100*participant_penalty)
+
+      # Penalize groups that stray too far from target_participants.
       for g in range(0, self.params.max_groups):
-        group_size = sum(vars.groups[(r,g)])
+        num_participants = sum(vars.group_participants[(r,g)])
         group_active = vars.group_active[(r,g)]
-        group_size_penalty = model.NewIntVar(0, len(self.riders.AllLeaders()),
-                                             VarName('group_size_penalty', [r, g]))
-        model.AddAbsEquality(group_size_penalty, group_size - vars.target_size[r])
-        group_size_p2 = model.NewIntVar(0, len(self.riders.AllLeaders()),
-                                        VarName('group_size_p2', [r, g]))
-        model.Add(group_size_p2 == group_size_penalty).OnlyEnforceIf(group_active)
-        model.Add(group_size_p2 == 0).OnlyEnforceIf(group_active.Not())
-        penalties.append(group_size_p2)
+
+        penalty = model.NewIntVar(0, len(self.riders.AllParticipants()), VarName('num_participants_penalty', [r, g]))
+        model.AddAbsEquality(penalty, num_participants - vars.target_participants[r])
+        penalty2 = model.NewIntVar(0, len(self.riders.AllParticipants()), VarName('num_participants_penalty2', [r, g]))
+        model.Add(penalty2 == penalty).OnlyEnforceIf(group_active)
+        model.Add(penalty2 == 0).OnlyEnforceIf(group_active.Not())
+        penalties.append(penalty2)
 
     model.Minimize(sum(penalties))
 
@@ -290,7 +298,6 @@ class AlgorithmTM(object):
     '''
     Maximize the number of pairs of different riders that ride together.
     '''
-
     # Compute the set of all possible pairs of riders, and then we try to
     # optimize for including as many pairs as possible in the rosters.
     all_pairs = set()
@@ -323,8 +330,25 @@ class AlgorithmTM(object):
         return p1.mentor == p2.id
 
     scores = []
+
+    # Penalize groups where an inexperienced leader isn't with 2 other leaders.
+    for r in range(0, self.params.num_rides):
+      for g in range(0, self.params.max_groups):
+        inexperienced = sum(vars.group_leaders_inexperienced[(r,g)])
+        num_leaders = sum(vars.group_leaders[(r,g)])
+        group_active = vars.group_active[(r,g)]
+
+        penalty = model.NewIntVar(0, len(self.riders.AllLeaders()), VarName('inexperienced_leader_penalty', [r, g]))
+        model.AddAbsEquality(penalty, num_leaders - inexperienced - 2)
+        penalty2 = model.NewIntVar(0, len(self.riders.AllLeaders()), VarName('inexperienced_leader_penalty2', [r, g]))
+        model.Add(penalty2 == penalty).OnlyEnforceIf(group_active)
+        model.Add(penalty2 == 0).OnlyEnforceIf(group_active.Not())
+        scores.append(-20*penalty2)
+
     for (p1, p2) in all_pairs:
       vars.paired[(p1, p2)] = model.NewBoolVar(VarName('paired', [p1, p2]))
+      p1_obj = self.riders.Rider(p1)
+      p2_obj = self.riders.Rider(p2)
 
       paired_in_group = []
       not_paired_in_group = []
@@ -343,8 +367,6 @@ class AlgorithmTM(object):
           paired_on_ride.append(paired_here)
 
         # For ride 2 force mentor/mentee pairings.
-        p1_obj = self.riders.Rider(p1)
-        p2_obj = self.riders.Rider(p2)
         for mr in range(1, self.params.num_rides):
             not_previously_available = True
             for mrp in range(1, mr):
@@ -390,8 +412,8 @@ class AlgorithmTM(object):
     self.AddRiderConstraints(model, vars)
     return model
 
-  def SolveAndLog(self, solver, model, vars):
-    status = solver.Solve(model)
+  def SolveAndLog(self, solver, printer, model, vars):
+    status = solver.Solve(model, printer)
     print(f'Maximum of objective function: {solver.ObjectiveValue()}\n')
     print('\nStatistics')
     print(f'  status   : {solver.StatusName(status)}')
@@ -416,16 +438,16 @@ class AlgorithmTM(object):
     solver.parameters.log_search_progress = True
     solver.parameters.max_time_in_seconds = self.params.time_limit
 
-    results = self.SolveAndLog(solver, model, vars)
+    results = self.SolveAndLog(solver, None, model, vars)
     if results is None:
       return
 
     print()
-    for (k,vs) in vars.target_size.items():
+    for (k,vs) in vars.target_participants.items():
       vn = vars.num_groups[k]
       vl = vars.target_leaders[k]
-      print('Ride %d >> %d num_groups (ideal %d) : target_size %d and target_leaders %d' %
-            (k+1, solver.Value(vn), self.ideal_num_groups[k], solver.Value(vs), solver.Value(vl)))
+      print('Ride %d >> %d num_groups : target_participants %d and target_leaders %d' %
+            (k+1, solver.Value(vn), solver.Value(vs), solver.Value(vl)))
 
     hints = vars.RecordHints(solver)
     print()
@@ -435,11 +457,13 @@ class AlgorithmTM(object):
     vars.RestoreHints(model, hints)
     self.OptimizePairings(model, vars)
     print(model.ModelStats())
+
     solver = cp_model.CpSolver()
+    printer = Printer(vars)
     solver.parameters.log_search_progress = True
     solver.parameters.max_time_in_seconds = self.params.time_limit
 
-    results = self.SolveAndLog(solver, model, vars)
+    results = self.SolveAndLog(solver, printer, model, vars)
     if results is None:
       return
 
