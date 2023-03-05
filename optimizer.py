@@ -1,7 +1,7 @@
 import math
 import random
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from ortools.sat.python import cp_model
 
 from sig_groups.ride import Roster
@@ -88,21 +88,27 @@ class Vars(object):
     restore("target_participants", self.target_participants, constraint=True)
     restore("target_leaders", self.target_leaders, constraint=True)
 
+from ipykernel import comm
 class Printer(cp_model.CpSolverSolutionCallback):
-  def __init__(self, vars):
+  def __init__(self, vars, riders):
     cp_model.CpSolverSolutionCallback.__init__(self)
     self.vars = vars
+    self.riders = riders
 
   def on_solution_callback(self):
-    print("New solution!")
-
     memberships = []
     for (k,v) in self.vars.memberships.items():
       if (self.Value(v)):
         memberships.append(k)
-    print('----------------------------')
-    print(memberships)
-    print('============================')
+
+    groups = defaultdict(lambda: defaultdict(lambda: []))
+    for (r, g, p) in memberships:
+      groups[r+1][g+1].append(self.riders.Rider(p).RosterString())
+
+    #print('----------------------------')
+    comm.Comm(target_name='rosters', data=dict(groups), buffers=[])
+    #print(memberships)
+    #print('============================')
 
 
 class AlgorithmTM(object):
@@ -202,7 +208,9 @@ class AlgorithmTM(object):
       vars.target_leaders[r] = model.NewIntVar(0, self.params.max_group_size, VarName('target_leaders', [r]))
 
     for r in range(self.params.start_ride, self.params.num_rides):
-      model.Add(vars.num_scouts[r] == self.num_scouts[r])
+      #target_scouts_groups = model.NewIntVar(0, self.params.max_groups, VarName('target_scout_groups', [r]))
+      #model.AddMinEquality(target_scouts_groups, [self.num_scouts[r], vars.num_groups[r]])
+      #model.Add(vars.num_scouts[r] == target_scouts_groups)
       for g in range(0, self.params.max_groups):
         group_size = sum(vars.groups[(r,g)])
         group_active = vars.group_active[(r,g)]
@@ -279,6 +287,10 @@ class AlgorithmTM(object):
                                             VarName('participant_penalty', [r]))
       model.AddAbsEquality(participant_penalty, vars.target_participants[r] - 4)
       penalties.append(100*participant_penalty)
+      participant_penalty2 = model.NewIntVar(0, len(self.riders.AllParticipants()),
+                                            VarName('participant_penalty2', [r]))
+      model.AddAbsEquality(participant_penalty2, vars.target_participants[r] - 3)
+      penalties.append(100*participant_penalty2)
 
       # Penalize groups that stray too far from target_participants.
       for g in range(0, self.params.max_groups):
@@ -333,6 +345,7 @@ class AlgorithmTM(object):
 
     # Penalize groups where an inexperienced leader isn't with 2 other leaders.
     for r in range(0, self.params.num_rides):
+      scores.append(10*vars.num_scouts[r])
       for g in range(0, self.params.max_groups):
         inexperienced = sum(vars.group_leaders_inexperienced[(r,g)])
         num_leaders = sum(vars.group_leaders[(r,g)])
@@ -343,7 +356,7 @@ class AlgorithmTM(object):
         penalty2 = model.NewIntVar(0, len(self.riders.AllLeaders()), VarName('inexperienced_leader_penalty2', [r, g]))
         model.Add(penalty2 == penalty).OnlyEnforceIf(group_active)
         model.Add(penalty2 == 0).OnlyEnforceIf(group_active.Not())
-        scores.append(-20*penalty2)
+        scores.append(-200*penalty2)
 
     for (p1, p2) in all_pairs:
       vars.paired[(p1, p2)] = model.NewBoolVar(VarName('paired', [p1, p2]))
@@ -380,10 +393,13 @@ class AlgorithmTM(object):
               model.AddBoolOr(paired_on_ride)
 
         scores.append(self.riders.GetMatchScore(p1, p2) * sum(paired_on_ride))
-        if r == 9:
+        if r >= 7:
           scores.append(20*self.riders.IsCouple(p1, p2) * sum(paired_on_ride))
-        else:
-          scores.append(-20*self.riders.IsCouple(p1, p2) * sum(paired_on_ride))
+        elif not p1_obj.IsLeader() or not p2_obj.IsLeader():
+          scores.append(-5*self.riders.IsCouple(p1, p2) * sum(paired_on_ride))
+
+        if r == 9:
+          scores.append(1000*self.riders.IsGradRide(p1, p2) * sum(paired_on_ride))
 
       if not p1_obj.Ignore() and not p2_obj.Ignore():
         model.AddBoolOr(paired_in_group).OnlyEnforceIf(vars.paired[(p1, p2)])
@@ -434,11 +450,12 @@ class AlgorithmTM(object):
     model = self.BuildBaseModel(vars)
     self.OptimizeGroupSize(model, vars)
     print(model.ModelStats())
+    printer = Printer(vars, self.riders)
     solver = cp_model.CpSolver()
     solver.parameters.log_search_progress = True
     solver.parameters.max_time_in_seconds = self.params.time_limit
 
-    results = self.SolveAndLog(solver, None, model, vars)
+    results = self.SolveAndLog(solver, printer, model, vars)
     if results is None:
       return
 
@@ -458,8 +475,8 @@ class AlgorithmTM(object):
     self.OptimizePairings(model, vars)
     print(model.ModelStats())
 
+    printer = Printer(vars, self.riders)
     solver = cp_model.CpSolver()
-    printer = Printer(vars)
     solver.parameters.log_search_progress = True
     solver.parameters.max_time_in_seconds = self.params.time_limit
 

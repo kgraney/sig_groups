@@ -130,6 +130,12 @@ class RiderData(object):
     except KeyError:
       return False
 
+  def IsGradRide(self, p1, p2):
+    try:
+      return self.matches[(p1, p2)].grad_ride
+    except KeyError:
+      return False
+
   def Rider(self, id):
     return self.rider_map[id]
 
@@ -139,3 +145,4 @@ class Match(object):
     self.p2 = p2
     self.score = 0
     self.couple = False
+    self.grad_ride = False

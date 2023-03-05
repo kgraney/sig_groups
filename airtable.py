@@ -114,6 +114,8 @@ def _CreateMatch(json):
         obj.score = -5
     elif words == 'Couple':
         obj.couple = True
+    elif words == 'Grad Ride':
+        obj.grad_ride = True
     return obj
 
 def LoadLeaders():
@@ -123,7 +125,9 @@ def LoadParticipants():
   return _LoadTable("Participants", _CreateParticipant)
 
 def LoadMatches():
-  return _LoadTable("Matches", _CreateMatch)
+  matches = _LoadTable("Matches", _CreateMatch)
+  matches.append(m)
+  return matches
 
 def GetPriorRosters(data):
   rosters = []
