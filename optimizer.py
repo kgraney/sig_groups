@@ -135,9 +135,17 @@ class AlgorithmTM(object):
     for (r, g, p) in memberships:
       data[(r,g)].append(self.riders.Rider(p))
 
+    existing_rosters = {}
+    for roster in self.prior_rosters:
+        key = (roster.ride, roster.group)
+        existing_rosters[key] = roster.id
+
     rosters = []
     for (r,g) in sorted(data):
-      rosters.append(Roster(r, g, data[(r,g)]))
+      if (r,g) in existing_rosters:
+        rosters.append(Roster(existing_rosters[(r,g)], r, g, data[(r,g)]))
+      else:
+        rosters.append(Roster(None, r, g, data[(r,g)]))
     return rosters
 
   def InitializeModel(self, model, vars):
@@ -184,9 +192,9 @@ class AlgorithmTM(object):
     prior_ride_true = set()
     finalized = set()
     for roster in self.prior_rosters:
-      for rider in roster.riders:
-        prior_ride_true.add((roster.ride, roster.group, rider.id))
       if roster.finalized:
+        for rider in roster.riders:
+          prior_ride_true.add((roster.ride, roster.group, rider.id))
         finalized.add((roster.ride, roster.group))
     for p in self.riders.AllRiders():
       for r in range(0, self.params.num_rides):

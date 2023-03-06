@@ -1,7 +1,8 @@
 from sig_groups.rider import Leader, Participant
 
 class Roster(object):
-    def __init__(self, ride, group, riders, finalized=False):
+    def __init__(self, id, ride, group, riders, finalized=False):
+        self.id = id
         self.ride = ride
         self.group = group
         self.riders = riders

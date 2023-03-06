@@ -11,7 +11,7 @@ def _GetAirtableKey():
       airtable_api_key = f.readlines()[0].strip()
     return airtable_api_key
 
-AIRTABLE_BASE = 'app1abUFnsuwfcY2a'
+AIRTABLE_BASE = 'appRSAvJlUzJ7xPx5'
 AIRTABLE_KEY = _GetAirtableKey()
 
 def _GetAirtable(url_path):
@@ -24,6 +24,12 @@ def _PostAirtable(url_path, data):
     headers = {'Authorization': 'Bearer ' + AIRTABLE_KEY,
              'Content-Type': 'application/json'}
     return requests.post(url, headers=headers, json=data)
+
+def _PutAirtable(url_path, data):
+    url = "https://api.airtable.com/v0/" + AIRTABLE_BASE + "/" + url_path
+    headers = {'Authorization': 'Bearer ' + AIRTABLE_KEY,
+             'Content-Type': 'application/json'}
+    return requests.put(url, headers=headers, json=data)
 
 def _LoadTable(table, construct):
   records = []
@@ -113,6 +119,7 @@ def _CreateMatch(json):
     elif words == 'Meh Match':
         obj.score = -5
     elif words == 'Couple':
+        obj.score = 1
         obj.couple = True
     elif words == 'Grad Ride':
         obj.grad_ride = True
@@ -133,6 +140,7 @@ def GetPriorRosters(data):
   rosters = []
   response = _GetAirtable('Rosters')
   for r in response.json()['records']:
+    id = r['id']
     group = r['fields']['Group']
     ride = AirtableIdToRideNum(r['fields']['Ride'][0])
     riders = []
@@ -143,20 +151,28 @@ def GetPriorRosters(data):
     finalized = False
     if 'Finalized' in r['fields'] and r['fields']['Finalized'] == True:
        finalized = True
-    rosters.append(Roster(ride, group, riders, finalized))
+    rosters.append(Roster(id, ride, group, riders, finalized))
   return rosters
 
 def CreateRoster(roster):
+  if roster.finalized:
+    print('Skipping finalized roster: ', r.id)
+    return
   leaders = [x.id for x in roster.riders if x.IsLeader()]
   participants = [x.id for x in roster.riders if not x.IsLeader()]
-  record = {
-      'fields': {
-          'Ride': [RideNumToAirtableId(roster.ride)],
-          'Group': roster.group,
-          'Leaders': leaders,
-          'Participants': participants,
-      }
+  fields = {
+    'Ride': [RideNumToAirtableId(roster.ride)],
+    'Group': roster.group,
+    'Leaders': leaders,
+    'Participants': participants,
   }
-  print(record)
-  resp = _PostAirtable('Rosters', { 'records': [record] })
-  print(resp.content)
+  if roster.id is not None:
+    record = {'id': roster.id, 'fields': fields}
+    print(record)
+    resp = _PutAirtable('Rosters', { 'records': [record] })
+    print(resp.content)
+  else:
+    record = {'fields': fields}
+    print(record)
+    resp = _PostAirtable('Rosters', { 'records': [record] })
+    print(resp.content)
