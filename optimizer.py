@@ -133,7 +133,7 @@ class AlgorithmTM(object):
   def GetRosters(self, memberships):
     data = defaultdict(lambda: [])
     for (r, g, p) in memberships:
-      data[(r,g)].append(self.riders.Rider(p))
+      data[(r,g)].append(p)
 
     existing_rosters = {}
     for roster in self.prior_rosters:
@@ -143,9 +143,9 @@ class AlgorithmTM(object):
     rosters = []
     for (r,g) in sorted(data):
       if (r,g) in existing_rosters:
-        rosters.append(Roster(existing_rosters[(r,g)], r, g, data[(r,g)]))
+        rosters.append(Roster(self.riders, existing_rosters[(r,g)], r, g, data[(r,g)]))
       else:
-        rosters.append(Roster(None, r, g, data[(r,g)]))
+        rosters.append(Roster(self.riders, None, r, g, data[(r,g)]))
     return rosters
 
   def InitializeModel(self, model, vars):
@@ -193,7 +193,7 @@ class AlgorithmTM(object):
     finalized = set()
     for roster in self.prior_rosters:
       if roster.finalized:
-        for rider in roster.riders:
+        for rider in [self.riders.Rider(r) for r in roster.rider_ids]:
           prior_ride_true.add((roster.ride, roster.group, rider.id))
         finalized.add((roster.ride, roster.group))
     for p in self.riders.AllRiders():
@@ -202,7 +202,7 @@ class AlgorithmTM(object):
           if (r,g,p.id) in prior_ride_true:
             model.Add(vars.memberships[(r, g, p.id)] == 1)
           else:
-            if r <= self.params.finalized_ride or (r,g) in finalized:
+            if r <= self.params.finalized_ride:# or (r,g) in finalized:
                 model.Add(vars.memberships[(r, g, p.id)] == 0)
 
   def AddGroupConstraints(self, model, vars):
@@ -353,7 +353,7 @@ class AlgorithmTM(object):
 
     # Penalize groups where an inexperienced leader isn't with 2 other leaders.
     for r in range(0, self.params.num_rides):
-      scores.append(10*vars.num_scouts[r])
+      scores.append(100*vars.num_scouts[r])
       for g in range(0, self.params.max_groups):
         inexperienced = sum(vars.group_leaders_inexperienced[(r,g)])
         num_leaders = sum(vars.group_leaders[(r,g)])

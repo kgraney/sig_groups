@@ -1,56 +1,99 @@
+import logging
 import requests
 
 from sig_groups.ride import Roster
 from sig_groups.rider import Leader, Participant, Match
 
-def _GetAirtableKey():
-    #key_file = "/mnt/c/Users/Kevin Graney/Desktop/airtable_key.txt"
-    key_file = "/usr/local/google/home/kmg/airtable_key.txt"
-    airtable_api_key = None
-    with open(key_file, 'r') as f:
-      airtable_api_key = f.readlines()[0].strip()
-    return airtable_api_key
+class AirtableClient(object):
+    def __init__(self, airtable_config, ride_config):
+        self.base = airtable_config['base']
+        self.key = airtable_config['key']
+        logging.info('Initializing Airtable client for base: ', self.base)
 
-AIRTABLE_BASE = 'appRSAvJlUzJ7xPx5'
-AIRTABLE_KEY = _GetAirtableKey()
+        self.ride_num = {}
+        for r in ride_config:
+            self.ride_num[r['airtable_id']] = r['rank']
 
-def _GetAirtable(url_path):
-    url = "https://api.airtable.com/v0/" + AIRTABLE_BASE + "/" + url_path
-    headers = {'Authorization': 'Bearer ' + AIRTABLE_KEY}
-    return requests.get(url, headers=headers)
+    def _GetAirtable(self, url_path):
+        url = "https://api.airtable.com/v0/" + self.base + "/" + url_path
+        headers = {'Authorization': 'Bearer ' + self.key}
+        return requests.get(url, headers=headers)
 
-def _PostAirtable(url_path, data):
-    url = "https://api.airtable.com/v0/" + AIRTABLE_BASE + "/" + url_path
-    headers = {'Authorization': 'Bearer ' + AIRTABLE_KEY,
-             'Content-Type': 'application/json'}
-    return requests.post(url, headers=headers, json=data)
+    def _PostAirtable(self,url_path, data):
+        url = "https://api.airtable.com/v0/" + self.base + "/" + url_path
+        headers = {'Authorization': 'Bearer ' + self.key,
+                 'Content-Type': 'application/json'}
+        return requests.post(url, headers=headers, json=data)
 
-def _PutAirtable(url_path, data):
-    url = "https://api.airtable.com/v0/" + AIRTABLE_BASE + "/" + url_path
-    headers = {'Authorization': 'Bearer ' + AIRTABLE_KEY,
-             'Content-Type': 'application/json'}
-    return requests.put(url, headers=headers, json=data)
+    def _PutAirtable(self, url_path, data):
+        url = "https://api.airtable.com/v0/" + self.base + "/" + url_path
+        headers = {'Authorization': 'Bearer ' + self.key,
+                 'Content-Type': 'application/json'}
+        return requests.put(url, headers=headers, json=data)
 
-def _LoadTable(table, construct):
-  records = []
-  response = _GetAirtable(table)
-  for record in response.json()['records']:
-    new = construct(record)
-    records.append(new)
-  return records
+    def _LoadTable(self, table, construct):
+      records = []
+      response = self._GetAirtable(table)
+      for record in response.json()['records']:
+        new = construct(record)
+        records.append(new)
+      return records
 
-_AIRTABLE_TO_RIDE = {}
-_RIDE_TO_AIRTABLE = {}
-response = _GetAirtable('Rides')
-for (i, r) in enumerate(response.json()['records']):
-    _RIDE_TO_AIRTABLE[r['fields']['Ride Number']] = r['id']
-    _AIRTABLE_TO_RIDE[r['id']] = r['fields']['Ride Number']
+    def LoadLeaders(self):
+      return self._LoadTable("Leaders", _CreateLeader)
 
-def RideNumToAirtableId(num):
-    return _RIDE_TO_AIRTABLE[num + 1]
+    def LoadParticipants(self):
+      return self._LoadTable("Participants", _CreateParticipant)
 
-def AirtableIdToRideNum(id):
-    return _AIRTABLE_TO_RIDE[id] - 1
+    def LoadMatches(self):
+      matches = self._LoadTable("Matches", _CreateMatch)
+      matches.append(m)
+      return matches
+
+    def GetPriorRosters(self, rider_data):
+      rosters = []
+      response = self._GetAirtable('Rosters')
+      for r in response.json()['records']:
+        id = r['id']
+        group = r['fields']['Group']
+        ride = self.ride_num[r['fields']['Ride'][0]]
+        rider_ids = []
+        if 'Leaders' in r['fields']:
+            rider_ids.extend(r['fields']['Leaders'])
+        if 'Participants' in r['fields']:
+            rider_ids.extend(r['fields']['Participants'])
+        finalized = False
+        if 'Finalized' in r['fields'] and r['fields']['Finalized'] == True:
+           finalized = True
+        rosters.append(Roster(rider_data, id, ride, group, rider_ids, finalized))
+      return rosters
+
+    def CreateRoster(self, roster, rides):
+      ride_to_id = {}
+      for r in rides:
+        ride_to_id[r.num] = r.airtable_id
+
+      if roster.finalized:
+        print('Skipping finalized roster: ', r.id)
+        return
+      leaders = roster.GetLeaderIds()
+      participants = roster.GetParticipantIds()
+      fields = {
+        'Ride': [ride_to_id[roster.ride]],
+        'Group': roster.group,
+        'Leaders': leaders,
+        'Participants': participants,
+      }
+      if roster.id is not None:
+        record = {'id': roster.id, 'fields': fields}
+        print(record)
+        resp = self._PutAirtable('Rosters', { 'records': [record] })
+        print(resp.content)
+      else:
+        record = {'fields': fields}
+        print(record)
+        resp = self._PostAirtable('Rosters', { 'records': [record] })
+        print(resp.content)
 
 def _LoadAvailability(rider, json):
   if 'Availability' in json['fields']:
@@ -59,16 +102,15 @@ def _LoadAvailability(rider, json):
 
 def _LoadScouted(rider, json):
   if 'Scouted' in json['fields']:
-    for r in json['fields']['Scouted']:
-      ride = AirtableIdToRideNum(r)
-      rider.scouted.add(ride)
+    for ride_id in json['fields']['Scouted']:
+      rider.scouted.add(ride_id)
 
 def _CreateLeader(json):
     l = Leader(json['id'], json['fields']['Name'])
     l.gender = json['fields']['Gender']
     _LoadAvailability(l, json)
     _LoadScouted(l, json)
-    if len(l.availability) < 5:
+    if len(l.availability) < 1:
       l.part_time = True
     if json['fields']['Experience'] == 'Experienced Leader':
       l.type = Leader.Type.EXPERIENCED
@@ -125,54 +167,3 @@ def _CreateMatch(json):
         obj.grad_ride = True
     return obj
 
-def LoadLeaders():
-  return _LoadTable("Leaders", _CreateLeader)
-
-def LoadParticipants():
-  return _LoadTable("Participants", _CreateParticipant)
-
-def LoadMatches():
-  matches = _LoadTable("Matches", _CreateMatch)
-  matches.append(m)
-  return matches
-
-def GetPriorRosters(data):
-  rosters = []
-  response = _GetAirtable('Rosters')
-  for r in response.json()['records']:
-    id = r['id']
-    group = r['fields']['Group']
-    ride = AirtableIdToRideNum(r['fields']['Ride'][0])
-    riders = []
-    if 'Leaders' in r['fields']:
-        riders.extend([data.Rider(x) for x in r['fields']['Leaders']])
-    if 'Participants' in r['fields']:
-        riders.extend([data.Rider(x) for x in r['fields']['Participants']])
-    finalized = False
-    if 'Finalized' in r['fields'] and r['fields']['Finalized'] == True:
-       finalized = True
-    rosters.append(Roster(id, ride, group, riders, finalized))
-  return rosters
-
-def CreateRoster(roster):
-  if roster.finalized:
-    print('Skipping finalized roster: ', r.id)
-    return
-  leaders = [x.id for x in roster.riders if x.IsLeader()]
-  participants = [x.id for x in roster.riders if not x.IsLeader()]
-  fields = {
-    'Ride': [RideNumToAirtableId(roster.ride)],
-    'Group': roster.group,
-    'Leaders': leaders,
-    'Participants': participants,
-  }
-  if roster.id is not None:
-    record = {'id': roster.id, 'fields': fields}
-    print(record)
-    resp = _PutAirtable('Rosters', { 'records': [record] })
-    print(resp.content)
-  else:
-    record = {'fields': fields}
-    print(record)
-    resp = _PostAirtable('Rosters', { 'records': [record] })
-    print(resp.content)

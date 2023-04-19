@@ -124,6 +124,14 @@ class RiderData(object):
     except KeyError:
       return 1
 
+  def SetMatchScore(self, p1, p2, score):
+    m1 = Match(p1, p2)
+    m1.score = score
+    self.matches[(p1, p2)] = m1
+    m2 = Match(p2, p1)
+    m2.score = score
+    self.matches[(p2, p1)] = m2
+
   def IsCouple(self, p1, p2):
     try:
       return self.matches[(p1, p2)].couple
