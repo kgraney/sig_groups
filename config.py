@@ -28,6 +28,12 @@ class Config:
     def AlgorithmParams(self):
         return self.yaml['algorithm']
 
+    def Constraints(self, ride):
+        try:
+            return self.yaml['rides'][ride]['constraints']
+        except KeyError:
+            return []
+
 def LoadConfigFile(path):
     with open(path, "r") as yamlfile:
         data = yaml.load(yamlfile, Loader=yaml.FullLoader)

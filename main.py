@@ -29,7 +29,11 @@ params.max_group_size = 20
 params.time_limit = config.AlgorithmParams()['time_limit']
 params.num_rides = 10
 
-alg = AlgorithmTM(rider_data, prior_rosters, params)
+for ride in rides:
+    for constraint in config.Constraints(ride.num):
+        ride.AddTogetherConstraint(constraint['riders'])
+
+alg = AlgorithmTM(rider_data, rides, prior_rosters, params)
 rosters = alg.Solve()
 #PrintRosters(rosters, rider_data)
 

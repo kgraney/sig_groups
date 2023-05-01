@@ -11,7 +11,15 @@ class Ride(object):
             self.slack_roster_post = ride_config['slack_roster_post']
         else:
             self.slack_roster_post = None
+        self.together = set()
 
+    def AddTogetherConstraint(self, riders):
+        for r1 in riders:
+            for r2 in riders:
+                self.together.add((r1, r2))
+
+    def PairRidersTogether(self, p1, p2):
+        return (p1, p2) in self.together
 
 class Roster(object):
     def __init__(self, rider_data, id, ride, group, rider_ids, finalized=False):

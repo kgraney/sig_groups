@@ -112,8 +112,11 @@ class Printer(cp_model.CpSolverSolutionCallback):
 
 
 class AlgorithmTM(object):
-  def __init__(self, riders, prior_rosters, params):
+  def __init__(self, riders, rides, prior_rosters, params):
     self.riders = riders
+    self.rides = {}
+    for r in rides:
+        self.rides[r.num] = r
     self.prior_rosters = prior_rosters
     self.params = params
 
@@ -399,6 +402,12 @@ class AlgorithmTM(object):
                 not_previously_available):
               print('Adding ride %d mentor constraint for'%r, p1_obj.name, p2_obj.name)
               model.AddBoolOr(paired_on_ride)
+
+        ride = self.rides[r]
+        if (p1_obj.IsAvailable(r) and p2_obj.IsAvailable(r) and
+            ride.PairRidersTogether(p1, p2)):
+            print('Adding ride %d bonus for'%r, p1_obj.name, p2_obj.name)
+            scores.append(1000 * sum(paired_on_ride))
 
         scores.append(self.riders.GetMatchScore(p1, p2) * sum(paired_on_ride))
         if r >= 7:
