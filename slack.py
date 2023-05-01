@@ -43,3 +43,19 @@ class SlackClient(object):
             print(result)
       except SlackApiError as e:
         print(f"Error posting message: {e}")
+
+    def PostFinal(self, rosters):
+      ride = rosters.ride
+      channel_id = self.channel[ride]
+      msg_ts = self.post_ts[ride]
+      try:
+        result = self.client.chat_getPermalink(channel=channel_id, message_ts=msg_ts)
+        print(result)
+        link = result['permalink']
+
+        result = self.client.chat_postMessage(channel=channel_id, text='The rosters are finalized for this ride!  See them here: %s' % link)
+        print(result)
+      except SlackApiError as e:
+        print(f"Error posting message: {e}")
+
+
