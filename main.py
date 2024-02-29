@@ -10,7 +10,7 @@ from sig_groups.ride import Ride, Rosters
 from sig_groups.rider import RiderData
 from sig_groups.slack import SlackClient
 
-config = LoadConfigFile("configs/2023.yaml")
+config = LoadConfigFile("configs/2024.yaml")
 rides = [Ride(x) for x in config.Rides()]
 
 airtable_client = AirtableClient(config.Airtable(), config.Rides())
