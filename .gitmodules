@@ -1,0 +1,3 @@
+[submodule "configs"]
+	path = configs
+	url = git@github.com:kgraney/sig_groups_configs.git
