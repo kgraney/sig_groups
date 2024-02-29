@@ -7,7 +7,10 @@ class Ride(object):
         self.title = ride_config['title']
         self.airtable_id = ride_config['airtable_id']
         self.slack_channel = ride_config['slack_channel']
-        self.slack_roster_post = ride_config['slack_roster_post']
+        if 'slack_roster_post' in ride_config:
+            self.slack_roster_post = ride_config['slack_roster_post']
+        else:
+            self.slack_roster_post = None
 
 
 class Roster(object):
