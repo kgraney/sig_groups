@@ -291,11 +291,11 @@ class AlgorithmTM(object):
       penalties.append(leader_penalty)
 
       # Don't stray too far from 4 target participants.
-      participant_penalty = model.NewIntVar(0, len(self.riders.AllParticipants()),
+      participant_penalty = model.NewIntVar(0, len(self.riders.AllParticipants()) + 4,
                                             VarName('participant_penalty', [r]))
       model.AddAbsEquality(participant_penalty, vars.target_participants[r] - 4)
       penalties.append(100*participant_penalty)
-      participant_penalty2 = model.NewIntVar(0, len(self.riders.AllParticipants()),
+      participant_penalty2 = model.NewIntVar(0, len(self.riders.AllParticipants()) + 3,
                                             VarName('participant_penalty2', [r]))
       model.AddAbsEquality(participant_penalty2, vars.target_participants[r] - 3)
       penalties.append(100*participant_penalty2)
