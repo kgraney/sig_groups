@@ -21,6 +21,9 @@ class Rider(object):
   def IsAvailable(self, ride_num):
     return ride_num in self.availability
 
+  def NumAvailableRides(self):
+    return len(self.availability)
+
   def RosterString(self):
     return ('   ' + self.gender + ' ' + self.name)
 

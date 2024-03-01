@@ -56,42 +56,57 @@ def GenerateGif(config, rosters, rider_data):
           for i in range(r.ride, config.NumRides()):
             rides_together_through[i][canonical_pair] += 1
 
-    people = rider_data.AllRiders()
+    # We want the chart to focus on riders attending more rides and filter out
+    # those (particulary stale leader entries) that don't attend any.
+    people = sorted(rider_data.AllRiders(), key=lambda x: x.NumAvailableRides(), reverse=True)
+    people = [x for x in people if x.NumAvailableRides() > 0]
 
     def PairFrequencyPlot(finalized, ride):
-        final_pair_matrix = np.zeros(shape=(len(people), len(people)))
         modeled_pair_matrix = np.zeros(shape=(len(people), len(people)))
+        new_pair_matrix = np.zeros(shape=(len(people), len(people)))
         for i, p1 in enumerate(people):
           for j, p2 in enumerate(people):
             canonical_pair = tuple(sorted((p1.id, p2.id)))
             if i <= j:
-                final_pair_matrix[j][i] = rides_together_through[finalized][canonical_pair]
                 modeled_pair_matrix[i][j] = rides_together_through[ride][canonical_pair]
                 modeled_pair_matrix[j][i] = rides_together_through[config.NumRides() - 1][canonical_pair]
+                if i != j:
+                    new_pair_matrix[i][j] = (rides_together_through[ride][canonical_pair]
+                                             - rides_together_through[ride-1][canonical_pair])
 
         labels = [p.name for p in people]
 
-        maxval = np.max([np.max(final_pair_matrix), np.max(modeled_pair_matrix)])
-        fig, (ax1, ax2) = plt.subplots(1,2, figsize=(20,20))
-        ax1.set_title('Modeled to Finish / Through Ride %d' % (ride + 1))
-        ax1.set_xticks(np.arange(0, len(people), 1.0), labels=labels, minor=True, rotation=90, fontsize='x-small')
-        ax1.set_xticks(np.arange(0, len(people), 1.0), labels=labels, minor=False, rotation=90, fontsize='x-small')
-        ax1.set_yticks(np.arange(0, len(people), 1.0), labels=labels, minor=True, fontsize='x-small')
-        ax1.set_yticks(np.arange(0, len(people), 1.0), labels=labels, minor=False, fontsize='x-small')
-        ax2.set_xticks(np.arange(0, len(people), 1.0), labels=labels, minor=True, rotation=90, fontsize='x-small')
-        ax2.set_xticks(np.arange(0, len(people), 1.0), labels=labels, minor=False, rotation=90, fontsize='x-small')
+        fig, (ax1) = plt.subplots(1,1,figsize=(10,10))
+        ax1.set_title('Pair Frequency: Modeled to Finish \ Through Ride %d' % (ride + 1))
+        ax1.set_xticks(np.arange(0, len(people), 1.0), labels=labels, minor=True, rotation=90, fontsize='small')
+        ax1.set_xticks(np.arange(0, len(people), 1.0), labels=labels, minor=False, rotation=90, fontsize='small')
+        ax1.set_yticks(np.arange(0, len(people), 1.0), labels=labels, minor=True, fontsize='small')
+        ax1.set_yticks(np.arange(0, len(people), 1.0), labels=labels, minor=False, fontsize='small')
 
-        #ax1.set_xticks(range(0, len(people)), labels=labels, minor=False, rotation=90, fontsize='xx-small')
+        def highlight_cell(x,y, ax=None, **kwargs):
+            rect = plt.Rectangle((x-.5, y-.5), 1,1, fill=False, **kwargs)
+            ax = ax or plt.gca()
+            ax.add_patch(rect)
+            return rect
 
-        #ax1.set_xticklabels(labels, rotation=90, horizontalalignment='right')
-        ax1.matshow(modeled_pair_matrix, vmin=0, vmax=maxval, cmap=plt.cm.viridis)
-        ax2.set_title('Through Ride %d' % (finalized + 1))
-        ax2.matshow(final_pair_matrix, vmin=0, vmax=maxval, cmap=plt.cm.viridis)
-        #fig.colorbar(plot2)
+        ax1.matshow(modeled_pair_matrix, vmin=0, vmax=config.NumRides(), cmap=plt.cm.Blues, aspect='equal')
+        for i in range(0, len(people)):
+            for j in range(0, len(people)):
+                c = modeled_pair_matrix[j,i]
+                ax1.text(i, j, str(int(c)), va='center', ha='center')
+                # Riding together on this ride
+                if new_pair_matrix[i][j]:
+                    # First time riding together
+                    if modeled_pair_matrix[i][j] == 1:
+                        highlight_cell(j, i, ax=ax1, color="green", linewidth=2)
+                    else:
+                        highlight_cell(j, i, ax=ax1, color="red", linewidth=2)
+
         if ride <= finalized:
             fig.savefig('/tmp/pairings-%d.png' % ride, facecolor='white', transparent=False, bbox_inches='tight')
         else:
             fig.savefig('/tmp/pairings-%d.png' % ride, facecolor='yellow', transparent=False, bbox_inches='tight')
+
     for i in range(0, config.NumRides()):
         PairFrequencyPlot(config.Finalized(), i)
 
