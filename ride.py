@@ -57,12 +57,12 @@ class Rosters(object):
             self.ride = r.ride
             break
 
-    def SlackBlocks(self):
+    def SlackBlocks(self, image_id=None):
         s = '\n'.join(str(s) for s in self.rosters)
         finalized_msg = f":computer: These rosters are a *DRAFT* (last updated {datetime.now()})."
         if self.finalized:
             finalized_msg = f":white_check_mark: These rosters are *FINALIZED*."
-        return [
+        blocks = [
                 {
                     "type": "header",
                     "text": {
@@ -87,5 +87,11 @@ class Rosters(object):
                         "type": "mrkdwn",
                         "text": f"```{s}```",
                     }
-                }
-                ]
+                }]
+        if image_id:
+            blocks.append({
+                "type": "image",
+                "slack_file": { "id": image_id },
+                "alt_text": "Algorithm status for ride {self.ride + 1}",
+            })
+        return blocks

@@ -8,6 +8,7 @@ class SlackClient(object):
     def __init__(self, slack_config, rides):
         self.client = WebClient(token=slack_config['token'])
         self.report_channel = slack_config['reports_channel']
+        self.public_uploads_channel = slack_config['public_uploads_channel']
 
         self.channel = {}
         self.post_ts = {}
@@ -28,6 +29,15 @@ class SlackClient(object):
       msg_ts = self.post_ts[ride]
       print(f'Writing to {channel_id} at {msg_ts} for ride {ride}')
 
+      image_id = None
+      try:
+        result = self.client.files_upload(channels=self.public_uploads_channel, title=f"Algorithm Pairings", initial_comment=f"TheAlgorithm™ status as of {datetime.now()}.", file="/tmp/pairings-%d.png" % ride, filetype="png")
+        print(result)
+        image_id = result['file']['id']
+      except SlackApiError as e:
+        print("Error uploading file: {}".format(e))
+        return
+
       try:
         if msg_ts is None:
             result = self.client.chat_postMessage(channel=channel_id, text='roster',
@@ -39,7 +49,7 @@ class SlackClient(object):
             print(f"ride = {ride} channel = {channel_id} ts = {timestamp}")
         else:
             result = self.client.chat_update(channel=channel_id, ts=msg_ts, text='roster',
-                blocks=json.dumps(rosters.SlackBlocks()))
+                blocks=json.dumps(rosters.SlackBlocks(image_id)))
             print(result)
       except SlackApiError as e:
         print(f"Error posting message: {e}")
