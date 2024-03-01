@@ -16,4 +16,5 @@ oauth_config:
       - chat:write
       - pins:write
       - pins:read
+      - files:read
       - files:write
