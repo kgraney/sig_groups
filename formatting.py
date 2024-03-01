@@ -110,7 +110,7 @@ def GenerateGif(config, rosters, rider_data):
     for i in range(0, config.NumRides()):
         PairFrequencyPlot(config.Finalized(), i)
 
-    with imageio.get_writer('/tmp/pairs.gif', mode='I', fps=2) as writer:
+    with imageio.get_writer('/tmp/pairs.gif', mode='I', fps=2, loop=0) as writer:
         files = ['/tmp/pairings-%d.png' % i for i in range(0, config.NumRides())]
         for filename in files:
             image = imageio.imread(filename)
