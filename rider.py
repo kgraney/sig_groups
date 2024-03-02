@@ -84,7 +84,7 @@ class RiderData(object):
     self.matches = {}  # map from (id, id) -> Match
 
   def AllRiders(self):
-    return self.rider_map.values()
+    return [x for x in self.rider_map.values() if x.NumAvailableRides() > 0]
 
   def AllFtRiders(self):
     result = []
