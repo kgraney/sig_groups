@@ -74,7 +74,7 @@ class Participant(Rider):
     return self.status == 'O'
 
 class RiderData(object):
-  def __init__(self, leaders, participants, matches):
+  def __init__(self, leaders, participants):
     self.rider_map = {}
     for x in leaders:
       self.rider_map[x.id] = x
@@ -82,11 +82,6 @@ class RiderData(object):
       self.rider_map[x.id] = x
 
     self.matches = {}  # map from (id, id) -> Match
-    for m in matches:
-      self.matches[(m.p1, m.p2)] = m
-      self.matches[(m.p2, m.p1)] = m
-
-    self.couples = set()
 
   def AllRiders(self):
     return self.rider_map.values()
@@ -134,18 +129,6 @@ class RiderData(object):
     m2 = Match(p2, p1)
     m2.score = score
     self.matches[(p2, p1)] = m2
-
-  def IsCouple(self, p1, p2):
-    try:
-      return self.matches[(p1, p2)].couple
-    except KeyError:
-      return False
-
-  def IsGradRide(self, p1, p2):
-    try:
-      return self.matches[(p1, p2)].grad_ride
-    except KeyError:
-      return False
 
   def Rider(self, id):
     return self.rider_map[id]

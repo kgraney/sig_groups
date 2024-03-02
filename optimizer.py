@@ -409,14 +409,8 @@ class AlgorithmTM(object):
             print('Adding ride %d bonus for'%r, p1_obj.name, p2_obj.name)
             scores.append(1000 * sum(paired_on_ride))
 
+        # Augment scores with match scores
         scores.append(self.riders.GetMatchScore(p1, p2) * sum(paired_on_ride))
-        if r >= 7:
-          scores.append(20*self.riders.IsCouple(p1, p2) * sum(paired_on_ride))
-        elif not p1_obj.IsLeader() or not p2_obj.IsLeader():
-          scores.append(-5*self.riders.IsCouple(p1, p2) * sum(paired_on_ride))
-
-        if r == 9:
-          scores.append(1000*self.riders.IsGradRide(p1, p2) * sum(paired_on_ride))
 
       if not p1_obj.Ignore() and not p2_obj.Ignore():
         model.AddBoolOr(paired_in_group).OnlyEnforceIf(vars.paired[(p1, p2)])

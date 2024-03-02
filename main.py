@@ -15,7 +15,7 @@ rides = [Ride(x) for x in config.Rides()]
 
 airtable_client = AirtableClient(config.Airtable(), config.Rides())
 
-rider_data = RiderData(airtable_client.LoadLeaders(), airtable_client.LoadParticipants(), [])
+rider_data = RiderData(airtable_client.LoadLeaders(), airtable_client.LoadParticipants())
 for m in config.Matches():
     rider_data.SetMatchScore(m['r1'], m['r2'], m['score'])
 

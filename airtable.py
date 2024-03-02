@@ -45,11 +45,6 @@ class AirtableClient(object):
     def LoadParticipants(self):
       return self._LoadTable("Participants", _CreateParticipant)
 
-    def LoadMatches(self):
-      matches = self._LoadTable("Matches", _CreateMatch)
-      matches.append(m)
-      return matches
-
     def GetPriorRosters(self, rider_data):
       rosters = []
       response = self._GetAirtable('Rosters')
