@@ -416,10 +416,11 @@ class AlgorithmTM(object):
         model.AddBoolOr(paired_in_group).OnlyEnforceIf(vars.paired[(p1, p2)])
         model.AddBoolAnd(not_paired_in_group).OnlyEnforceIf(vars.paired[(p1, p2)].Not())
 
-      bonus_pairs = model.NewIntVar(0, self.params.num_rides,
-                                    VarName('bonus_pairs', [p1, p2]))
-      model.AddAbsEquality(bonus_pairs, 1 - sum(paired_in_group))
-      scores.append(-10*bonus_pairs)
+      # This adds significant computation cost to the model with limited benefit.
+      #bonus_pairs = model.NewIntVar(0, self.params.num_rides,
+      #                              VarName('bonus_pairs', [p1, p2]))
+      #model.AddAbsEquality(bonus_pairs, 1 - sum(paired_in_group))
+      #scores.append(-10*bonus_pairs)
 
     model.Maximize(sum(vars.paired.values()) + sum(scores))
 
