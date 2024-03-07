@@ -88,7 +88,7 @@ class Vars(object):
     restore("target_participants", self.target_participants, constraint=True)
     restore("target_leaders", self.target_leaders, constraint=True)
 
-from ipykernel import comm
+#from ipykernel import comm
 class Printer(cp_model.CpSolverSolutionCallback):
   def __init__(self, vars, riders):
     cp_model.CpSolverSolutionCallback.__init__(self)
@@ -106,7 +106,7 @@ class Printer(cp_model.CpSolverSolutionCallback):
       groups[r+1][g+1].append(self.riders.Rider(p).RosterString())
 
     #print('----------------------------')
-    comm.Comm(target_name='rosters', data=dict(groups), buffers=[])
+    #comm.Comm(target_name='rosters', data=dict(groups), buffers=[])
     #print(memberships)
     #print('============================')
 

@@ -25,9 +25,9 @@ prior_rosters = airtable_client.GetPriorRosters(rider_data)
 params = Params()
 params.start_ride = config.StartRide()
 params.finalized_ride = config.Finalized()
-params.max_group_size = 20
+params.max_group_size = config.AlgorithmParams()['max_group_size']
 params.time_limit = config.AlgorithmParams()['time_limit']
-params.num_rides = 10
+params.num_rides = config.AlgorithmParams()['num_rides']
 
 for ride in rides:
     for constraint in config.Constraints(ride.num):
@@ -35,7 +35,7 @@ for ride in rides:
 
 alg = AlgorithmTM(rider_data, rides, prior_rosters, params)
 rosters = alg.Solve()
-#PrintRosters(rosters, rider_data)
+PrintRosters(rosters, rider_data)
 
 GenerateGif(config, rosters, rider_data)
 
