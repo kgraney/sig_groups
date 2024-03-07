@@ -252,13 +252,14 @@ class AlgorithmTM(object):
         model.AddLinearConstraint(num_leaders - vars.target_leaders[r], 0, 1).OnlyEnforceIf(group_active)
 
     # Make sure that groups with more leaders don't have fewer participants.
-    for r in range(self.params.start_ride, self.params.num_rides):
-      for g1 in range(0, self.params.max_groups):
-        for g2 in range(0, self.params.max_groups):
-            g1_has_more_leaders = model.NewBoolVar(VarName('more_leaders', [r, g1, g2]))
-            model.Add(sum(vars.group_leaders[(r,g1)]) > sum(vars.group_leaders[(r,g2)])).OnlyEnforceIf(g1_has_more_leaders)
-            model.Add(sum(vars.group_leaders[(r,g1)]) <= sum(vars.group_leaders[(r,g2)])).OnlyEnforceIf(g1_has_more_leaders.Not())
-            model.Add(sum(vars.group_participants[(r,g1)]) >= sum(vars.group_participants[(r,g2)])).OnlyEnforceIf(g1_has_more_leaders)
+    # TODO: This is a desirable property, but it sometimes over constrains the model.
+    #for r in range(self.params.start_ride, self.params.num_rides):
+    #  for g1 in range(0, self.params.max_groups):
+    #    for g2 in range(0, self.params.max_groups):
+    #        g1_has_more_leaders = model.NewBoolVar(VarName('more_leaders', [r, g1, g2]))
+    #        model.Add(sum(vars.group_leaders[(r,g1)]) > sum(vars.group_leaders[(r,g2)])).OnlyEnforceIf(g1_has_more_leaders)
+    #        model.Add(sum(vars.group_leaders[(r,g1)]) <= sum(vars.group_leaders[(r,g2)])).OnlyEnforceIf(g1_has_more_leaders.Not())
+    #        model.Add(sum(vars.group_participants[(r,g1)]) >= sum(vars.group_participants[(r,g2)])).OnlyEnforceIf(g1_has_more_leaders)
 
   def AddRiderConstraints(self, model, vars):
     # Make sure every rider is in exactly one group if they're attending the
@@ -477,6 +478,11 @@ class AlgorithmTM(object):
       vl = vars.target_leaders[k]
       print('Ride %d >> %d num_groups : target_participants %d and target_leaders %d' %
             (k+1, solver.Value(vn), solver.Value(vs), solver.Value(vl)))
+      for g in range(0, self.params.max_groups):
+          num_leaders = sum(solver.Value(x) for x in vars.group_leaders[(k,g)])
+          num_participants = sum(solver.Value(x) for x in vars.group_participants[(k,g)])
+          print('  Group %d -- %d leaders and %d participants' %
+                (g, num_leaders, num_participants))
 
     hints = vars.RecordHints(solver)
     print()
