@@ -223,7 +223,7 @@ virtualenv .env && source .env/bin/activate && pip install -r requirements.txt
 ### Running the Algorithm™
 To run the algorithm execute the following command.  Note that generating the
 images requires a `$DISPLAY` environment variable set (though nothing is
-actually displayed on `$DISPLAY).
+actually displayed on `$DISPLAY`).
 
 Important things to consider _before_ running the script:
 
