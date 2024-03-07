@@ -14,6 +14,9 @@ and weights (coefficients on boolean terms in linear expressions).  We try
 to minimize or maximize the value of these linear expressions given different
 boolean solutions that satisfy the constraints.
 
+![sample roster gif](docs/sample_roster.gif?raw=true)
+See the [sample roster](docs/sample_roster.txt) corresponding to this image.
+
 ## The Algorithm™'s Objectives
 
 Constraints and preferences, which are implemented in `optimizer.py`,

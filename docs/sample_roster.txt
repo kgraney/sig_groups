@@ -1,0 +1,101 @@
+Ride 1
+L* M Rider 10                  L* M Rider 11                  L* F Rider 14                  L  F Rider 0                   L  F Rider 20
+L  F Rider 18                  L* F Rider 13                  L* M Rider 23                  L* M Rider 9                   L* M Rider 31
+   M Rider 37                  L  F Rider 16                  L* M Rider 28                     F Rider 35                     F Rider 38
+   M Rider 42                     M Rider 34                     F Rider 32                     F Rider 41                     M Rider 39
+   M Rider 43                     M Rider 44                     M Rider 33                     M Rider 48                     M Rider 40
+   F Rider 51                     F Rider 45                     M Rider 36                     F Rider 49                     M Rider 46
+                                  F Rider 47                     M Rider 50
+
+
+Ride 2
+L* M Rider 28                  L  F Rider 0                   L  F Rider 20                  L* M Rider 10                  L* M Rider 9
+L* M Rider 31                  L* M Rider 11                  L* M Rider 30                  L  F Rider 16                  L* F Rider 13
+   M Rider 34                  L  F Rider 18                     M Rider 33                     F Rider 32                     F Rider 35
+   M Rider 42                     M Rider 37                     M Rider 39                     M Rider 36                     M Rider 43
+   F Rider 47                     F Rider 38                     M Rider 44                     F Rider 41                     M Rider 46
+   F Rider 49                     M Rider 40                     F Rider 45                     F Rider 51                     M Rider 50
+                                  M Rider 48
+
+
+Ride 3
+L  F Rider 0                   L* M Rider 11                  L* M Rider 9                   L  F Rider 20                  L* M Rider 8
+L* F Rider 3                   L* F Rider 14                  L  F Rider 18                  L* M Rider 31                  L* M Rider 10
+L* F Rider 13                  L* M Rider 30                  L* M Rider 25                     F Rider 35                  L* M Rider 23
+   M Rider 33                     M Rider 36                     F Rider 32                     M Rider 42                     M Rider 37
+   M Rider 34                     M Rider 43                     M Rider 44                     M Rider 48                     M Rider 39
+   F Rider 38                     F Rider 49                     M Rider 46                     M Rider 50                     F Rider 41
+   M Rider 40                     F Rider 51                     F Rider 47                                                    F Rider 45
+
+
+Ride 4
+L* F Rider 3                   L  F Rider 18                  L* M Rider 10                  L  F Rider 0                   L  F Rider 16
+L* M Rider 9                   L* M Rider 23                  L* F Rider 13                  L* M Rider 8                   L* M Rider 31
+L  F Rider 20                     F Rider 38                  L* M Rider 25                  L* M Rider 28                     M Rider 33
+   F Rider 32                     M Rider 43                     M Rider 34                     F Rider 35                     M Rider 37
+   M Rider 36                     M Rider 48                     M Rider 40                     M Rider 44                     M Rider 42
+   M Rider 39                     F Rider 51                     F Rider 41                     M Rider 46                     F Rider 47
+   F Rider 45                                                    F Rider 49                     M Rider 50
+
+
+Ride 5
+L* F Rider 13                  L* F Rider 14                  L  F Rider 20                  L  F Rider 0                   L* M Rider 9
+L  F Rider 18                  L* M Rider 31                  L* M Rider 28                  L  F Rider 16                  L* M Rider 10
+   M Rider 36                     F Rider 32                     M Rider 39                  L* M Rider 30                  L* M Rider 11
+   M Rider 40                     M Rider 34                     M Rider 43                     F Rider 35                     M Rider 33
+   F Rider 41                     M Rider 37                     F Rider 49                     F Rider 38                     M Rider 42
+   F Rider 45                     M Rider 48                     F Rider 51                     M Rider 44                     M Rider 46
+                                                                                                F Rider 47                     M Rider 50
+
+
+Ride 6
+L* M Rider 9                   L* F Rider 13                  L  F Rider 18                  L  F Rider 16                  L  F Rider 0
+L* F Rider 14                  L  F Rider 20                  L* M Rider 30                  L* M Rider 25                  L* M Rider 10
+   F Rider 32                     M Rider 36                     M Rider 42                  L* M Rider 28                  L* M Rider 31
+   F Rider 35                     M Rider 37                     M Rider 46                     F Rider 38                     M Rider 33
+   M Rider 40                     M Rider 44                     F Rider 49                     M Rider 39                     M Rider 34
+   F Rider 47                     F Rider 51                     M Rider 50                     F Rider 45                     F Rider 41
+                                                                                                M Rider 48                     M Rider 43
+
+
+Ride 7
+L* F Rider 3                   L* M Rider 8                   L  F Rider 0                   L* M Rider 9
+L* M Rider 10                  L  F Rider 18                  L* F Rider 14                  L* M Rider 30
+   F Rider 35                  L  F Rider 20                     F Rider 32                     M Rider 34
+   M Rider 39                     M Rider 33                     F Rider 41                     M Rider 37
+   M Rider 42                     M Rider 36                     M Rider 43                     M Rider 40
+   M Rider 44                     F Rider 38                     F Rider 45                     F Rider 49
+   M Rider 48                     F Rider 47                     M Rider 46                     F Rider 51
+                                  M Rider 50
+
+
+Ride 8
+L* F Rider 13                  L* M Rider 10                  L  F Rider 18                  L* M Rider 9                   L  F Rider 0
+L  F Rider 20                  L* M Rider 30                  L* M Rider 31                  L  F Rider 16                  L* M Rider 25
+   M Rider 34                     F Rider 32                     F Rider 35                     M Rider 33                     M Rider 36
+   M Rider 39                     F Rider 38                     M Rider 37                     M Rider 40                     M Rider 42
+   M Rider 48                     F Rider 41                     M Rider 44                     F Rider 45                     M Rider 43
+   M Rider 50                     F Rider 47                     M Rider 46                     F Rider 49                     F Rider 51
+
+
+Ride 9
+L  F Rider 18                  L* M Rider 10                  L* M Rider 25
+L* M Rider 30                  L* F Rider 14                  L* M Rider 31
+   F Rider 32                  L  F Rider 20                     M Rider 33
+   M Rider 34                     F Rider 38                     F Rider 35
+   M Rider 36                     M Rider 40                     M Rider 37
+   M Rider 39                     F Rider 41                     F Rider 45
+   M Rider 46                     M Rider 42                     M Rider 50
+   F Rider 47                     M Rider 43                     F Rider 51
+   M Rider 48                     M Rider 44
+                                  F Rider 49
+
+
+Ride 10
+L* M Rider 8                   L* M Rider 9                   L  F Rider 18                  L  F Rider 0                   L* F Rider 3
+L* F Rider 13                  L* M Rider 31                  L* M Rider 28                  L* M Rider 10                  L  F Rider 16
+L* M Rider 30                     M Rider 34                     M Rider 37                  L  F Rider 20                     M Rider 43
+   F Rider 32                     F Rider 35                     M Rider 40                     M Rider 33                     M Rider 46
+   M Rider 42                     M Rider 36                     F Rider 41                     M Rider 39                     F Rider 47
+   F Rider 45                     F Rider 38                     M Rider 50                     M Rider 44                     F Rider 51
+   F Rider 49                                                                                   M Rider 48
