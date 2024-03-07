@@ -220,7 +220,7 @@ rosters, to Slack.
 ### Setup
 
 ```
-virtualenv .env && source .env/bin/activate && pip install -r requirements.txt
+python -m venv .env && source .env/bin/activate && pip3 install -r requirements.txt
 ```
 
 ### Running the Algorithm™
