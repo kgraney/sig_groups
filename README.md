@@ -238,8 +238,15 @@ Important things to consider _before_ running the script:
 - `main.py` is loading the correct config
 - There's no race anticipated writing to Airtable.
 
+By default the script will output to the local console with images in `/tmp`.
 ```
 python3 main.py
+```
+
+To run the script _and_ publish the output to Slack/Airtable, pass the
+`--publish` flag.
+```
+python3 main.py --publish
 ```
 
 ### Finalizing rosters
