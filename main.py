@@ -2,6 +2,9 @@ import argparse
 import sys
 sys.path.insert(1, '/usr/local/google/home/kmg/')
 sys.path.insert(1, '/mnt/c/Users/Kevin Graney/SIG Groupings/')
+sys.path.insert(1, '/usr/local/google/home/amfisher/')
+sys.path.insert(1, '/usr/local/google/home/amfisher/dsig24/')
+sys.path.insert(1, '/mnt/c/Users/Allison Fisher/SIG Groupings/')
 
 from sig_groups.airtable import AirtableClient
 from sig_groups.config import LoadConfigFile
