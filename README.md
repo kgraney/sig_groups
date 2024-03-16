@@ -252,12 +252,14 @@ python3 main.py --publish
 ### Finalizing rosters
 To finalize rosters run the following command.  Be sure `finalize.py` is
 loading the correct config and that the correct ride is being finalized.
-_Setting the ride to finalize requires a change to the code._
+The ride being finalized is passed on the command line.  To update Slack
+add the `--publish` flag.  Ride numbers start at zero.
 
 The finalization script loads rosters from Airtable and posts them to
 Slack.  This "feature" can be used to override the Algorithm™ output
 without a rerun.
 
 ```
-python3 finalize.py
+# Finalizes Ride 1
+python3 finalize.py 0 --publish
 ```

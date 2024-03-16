@@ -1,3 +1,4 @@
+import argparse
 import sys
 sys.path.insert(1, '/usr/local/google/home/kmg/')
 sys.path.insert(1, '/mnt/c/Users/Kevin Graney/SIG Groupings/')
@@ -11,21 +12,38 @@ from sig_groups.slack import SlackClient
 from sig_groups.rider import RiderData
 from sig_groups.formatting import PrintRosters
 
-config = LoadConfigFile("configs/2024.yaml")
-rides = [Ride(x) for x in config.Rides()]
+def finalize(config, ride, publish=False):
+    rides = [Ride(x) for x in config.Rides()]
 
-airtable_client = AirtableClient(config.Airtable(), config.Rides())
-rider_data = RiderData(airtable_client.LoadLeaders(), airtable_client.LoadParticipants())
+    airtable_client = AirtableClient(config.Airtable(), config.Rides())
+    rider_data = RiderData(airtable_client.LoadLeaders(), airtable_client.LoadParticipants())
 
-rosters = airtable_client.GetPriorRosters(rider_data)
+    rosters = airtable_client.GetPriorRosters(rider_data)
 
-slack_client = SlackClient(config.Slack(), rides)
-PrintRosters(rosters, rider_data)
+    slack_client = SlackClient(config.Slack(), rides)
+    print('Finalizing ride %d...' % (ride+1))
 
-# TODO: update for the ride you want to finalize.
-finalize_through_ride_n = 0
-for ride in [finalize_through_ride_n]:
     ride_rosters = Rosters(r for r in rosters if r.ride == ride)
-    slack_client.PostRoster(ride_rosters)
+    print('This is the finalized roster for ride %d...' % (ride+1))
+    PrintRosters(ride_rosters.rosters, rider_data)
 
-    slack_client.PostFinal(ride_rosters)
+    if (publish):
+        print('Posting to slack...')
+        slack_client.PostRoster(ride_rosters)
+        slack_client.PostFinal(ride_rosters)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(prog='finalize.py',
+        description='Finalizes through the provided ride.')
+    parser.add_argument('ride', type=int,
+        help='Specifies the ride number to finalize, starting at 0.')
+    parser.add_argument('-c', '--config', help='Config file path',
+        default='configs/2024.yaml')
+    parser.add_argument('-p', '--publish', action='store_true',
+        default=False,
+        help='Publish the finalized Roster.')
+
+    args = parser.parse_args()
+    print('Loading config file %s....' % args.config)
+    config = LoadConfigFile(args.config)
+    finalize(config, args.ride, args.publish)
