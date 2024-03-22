@@ -10,7 +10,7 @@ from sig_groups.config import LoadConfigFile
 from sig_groups.airtable import AirtableClient
 from sig_groups.slack import SlackClient
 from sig_groups.rider import RiderData
-from sig_groups.formatting import PrintRosters
+from sig_groups.formatting import PrintRosters, GenerateGif
 
 def finalize(config, ride, publish=False):
     rides = [Ride(x) for x in config.Rides()]
@@ -26,6 +26,7 @@ def finalize(config, ride, publish=False):
     ride_rosters = Rosters(r for r in rosters if r.ride == ride)
     print('This is the finalized roster for ride %d...' % (ride+1))
     PrintRosters(ride_rosters.rosters, rider_data)
+    GenerateGif(config, rosters, rider_data)
 
     if (publish):
         print('Posting to slack...')
