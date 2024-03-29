@@ -57,6 +57,9 @@ class Rosters(object):
             self.ride = r.ride
             break
 
+    def NumRosters(self):
+        return len(self.rosters)
+
     def SlackBlocks(self, image_id=None):
         s = '\n'.join(str(s) for s in self.rosters)
         finalized_msg = f":computer: These rosters are a *DRAFT* (last updated {datetime.now()})."

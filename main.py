@@ -48,6 +48,13 @@ def run_algorithm(config, publish=False):
 
     for ride in range(params.start_ride, params.num_rides):
         ride_rosters = Rosters(r for r in rosters if r.ride == ride)
+        ride_prior_rosters = Rosters(r for r in prior_rosters if r.ride == ride)
+
+        print('Ride %d - modeled %d rosters, previously %d rosters' %
+              (ride, ride_rosters.NumRosters(), ride_prior_rosters.NumRosters()))
+        for roster in ride_prior_rosters.rosters[ride_rosters.NumRosters():]:
+            airtable_client.DeleteRoster(roster, rides)
+
         for roster in ride_rosters.rosters:
             airtable_client.CreateRoster(roster, rides)
         slack_client.PostRoster(ride_rosters)

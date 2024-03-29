@@ -31,6 +31,12 @@ class AirtableClient(object):
                  'Content-Type': 'application/json'}
         return requests.put(url, headers=headers, json=data)
 
+    def _DeleteAirtable(self, url_path):
+        url = "https://api.airtable.com/v0/" + self.base + "/" + url_path
+        headers = {'Authorization': 'Bearer ' + self.key,
+                 'Content-Type': 'application/json'}
+        return requests.delete(url, headers=headers)
+
     def _LoadTable(self, table, construct):
       records = []
       response = self._GetAirtable(table)
@@ -89,6 +95,18 @@ class AirtableClient(object):
         print(record)
         resp = self._PostAirtable('Rosters', { 'records': [record] })
         print(resp.content)
+
+    def DeleteRoster(self, roster, rides):
+      ride_to_id = {}
+      for r in rides:
+        ride_to_id[r.num] = r.airtable_id
+
+      if roster.finalized:
+        print('Skipping finalized roster: ', r.id)
+        return
+      assert(len(roster.id) > 0)
+      print('Deleting %s' % roster.id)
+      self._DeleteAirtable('Rosters/%s' % roster.id)
 
 def _LoadAvailability(rider, json):
   if 'Availability' in json['fields']:
