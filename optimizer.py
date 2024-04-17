@@ -219,9 +219,9 @@ class AlgorithmTM(object):
       vars.target_leaders[r] = model.NewIntVar(0, self.params.max_group_size, VarName('target_leaders', [r]))
 
     for r in range(self.params.start_ride, self.params.num_rides):
-      #target_scouts_groups = model.NewIntVar(0, self.params.max_groups, VarName('target_scout_groups', [r]))
-      #model.AddMinEquality(target_scouts_groups, [self.num_scouts[r], vars.num_groups[r]])
-      #model.Add(vars.num_scouts[r] == target_scouts_groups)
+      target_scouts_groups = model.NewIntVar(0, self.params.max_groups, VarName('target_scout_groups', [r]))
+      model.AddMinEquality(target_scouts_groups, [self.num_scouts[r], vars.num_groups[r]])
+      model.Add(vars.num_scouts[r] == target_scouts_groups)
       for g in range(0, self.params.max_groups):
         group_size = sum(vars.groups[(r,g)])
         group_active = vars.group_active[(r,g)]
