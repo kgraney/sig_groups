@@ -43,7 +43,7 @@ class Vars(object):
     self.num_groups = {}
     self.target_leaders = {}
     self.target_participants = {}
-    self.num_scouts = {}
+    self.num_scout_groups = {}
 
     ### Derived variables.
 
@@ -121,15 +121,16 @@ class AlgorithmTM(object):
     self.params = params
 
     # map from r -> int
-    self.num_scouts = defaultdict(lambda: 0)
+    self.num_available_scouts = defaultdict(lambda: 0)
     num_available_leaders = defaultdict(lambda: 0)
-    self.num_scouts = defaultdict(lambda: 0)
     for r in range(0, params.num_rides):
       for p in self.riders.AllLeaders():
-        if p.IsLeader() and p.Scouted(r):
-          self.num_scouts[r] += 1
+        if p.IsLeader() and p.Scouted(self.rides[r].airtable_id):
+          self.num_available_scouts[r] += 1
         if p.IsAvailable(r):
           num_available_leaders[r] += 1
+    for r in range(0, params.num_rides):
+      print('Ride %d has %d available scouts' % (r, self.num_available_scouts[r]))
 
     print('Initializing Algorithm to start at ride ', self.params.start_ride)
 
@@ -177,7 +178,7 @@ class AlgorithmTM(object):
               vars.group_leaders_experienced[(r,g)].append(me)
             if p.type == Leader.Type.INEXPERIENCED:
               vars.group_leaders_inexperienced[(r,g)].append(me)
-            if p.Scouted(r):
+            if p.Scouted(self.rides[r].airtable_id):
               vars.group_leaders_scouted[(r,g)].append(me)
               num_scouts_group.append(me)
             if p.gender == 'F':
@@ -189,7 +190,7 @@ class AlgorithmTM(object):
         model.Add(sum(num_scouts_group) >= 1).OnlyEnforceIf(group_has_scout)
         model.Add(sum(num_scouts_group) < 1).OnlyEnforceIf(group_has_scout.Not())
         num_scout_groups.append(group_has_scout)
-      vars.num_scouts[r] = sum(num_scout_groups)
+      vars.num_scout_groups[r] = sum(num_scout_groups)
 
     # Constrain historical rosters to what they were.
     prior_ride_true = set()
@@ -220,8 +221,8 @@ class AlgorithmTM(object):
 
     for r in range(self.params.start_ride, self.params.num_rides):
       target_scouts_groups = model.NewIntVar(0, self.params.max_groups, VarName('target_scout_groups', [r]))
-      model.AddMinEquality(target_scouts_groups, [self.num_scouts[r], vars.num_groups[r]])
-      model.Add(vars.num_scouts[r] == target_scouts_groups)
+      model.AddMinEquality(target_scouts_groups, [self.num_available_scouts[r], vars.num_groups[r]])
+      model.Add(vars.num_scout_groups[r] == target_scouts_groups)
       for g in range(0, self.params.max_groups):
         group_size = sum(vars.groups[(r,g)])
         group_active = vars.group_active[(r,g)]
@@ -357,7 +358,7 @@ class AlgorithmTM(object):
 
     # Penalize groups where an inexperienced leader isn't with 2 other leaders.
     for r in range(0, self.params.num_rides):
-      scores.append(100*vars.num_scouts[r])
+      scores.append(100*vars.num_scout_groups[r])
       for g in range(0, self.params.max_groups):
         inexperienced = sum(vars.group_leaders_inexperienced[(r,g)])
         num_leaders = sum(vars.group_leaders[(r,g)])
