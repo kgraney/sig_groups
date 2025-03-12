@@ -364,9 +364,10 @@ class AlgorithmTM(object):
         num_leaders = sum(vars.group_leaders[(r,g)])
         group_active = vars.group_active[(r,g)]
 
-        penalty = model.NewIntVar(0, len(self.riders.AllLeaders()), VarName('inexperienced_leader_penalty', [r, g]))
+        penalty = model.NewIntVar(-2, len(self.riders.AllLeaders()), VarName('inexperienced_leader_penalty', [r, g]))
         model.AddAbsEquality(penalty, num_leaders - inexperienced - 2)
-        penalty2 = model.NewIntVar(0, len(self.riders.AllLeaders()), VarName('inexperienced_leader_penalty2', [r, g]))
+
+        penalty2 = model.NewIntVar(-2, len(self.riders.AllLeaders()), VarName('inexperienced_leader_penalty2', [r, g]))
         model.Add(penalty2 == penalty).OnlyEnforceIf(group_active)
         model.Add(penalty2 == 0).OnlyEnforceIf(group_active.Not())
         scores.append(-200*penalty2)
