@@ -71,7 +71,7 @@ if __name__ == '__main__':
     help='Run the algorithm and publish the results to Slack/Airtable.  If '
          'false the results won\'t be published.')
   parser.add_argument('-c', '--config', help='Config file path',
-    default='configs/2024.yaml')
+    default='configs/2025.yaml')
 
   args = parser.parse_args()
   print('Loading config file %s....' % args.config)
